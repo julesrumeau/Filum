@@ -1,0 +1,9 @@
+{
+  "name": "filum",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Analyse de continuité des relations OpenStreetMap",
+  "scripts": {
+    "test": "node --test test/"
+  }
+}

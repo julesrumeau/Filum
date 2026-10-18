@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Filum</title>
+<style>
+  :root { --fond:#fafaf7; --texte:#1c1c1a; --doux:#6b6b66; --trace:#2b6cb0; --alerte:#d62828; --avert:#e08a00; --selection:#7b2cbf; --surligne:#efe3fb; --bon:#2f855a; --bord:#d9d9d2; }
+  @media (prefers-color-scheme: dark) {
+    :root { --fond:#16161a; --texte:#ececec; --doux:#9a9a9a; --trace:#63b3ed; --alerte:#ff6b6b; --avert:#f6ad55; --selection:#d0a3ff; --surligne:#3a2a4d; --bon:#68d391; --bord:#34343a; }
+  }
+  * { box-sizing: border-box; }
+  body { margin:0; font:16px/1.5 system-ui, sans-serif; background:var(--fond); color:var(--texte); }
+  main { max-width:1280px; margin:0 auto; padding:16px; }
+  h1 { margin:0 0 4px; } .sous { color:var(--doux); margin:0 0 16px; }
+  .ligne { display:flex; gap:8px; flex-wrap:wrap; }
+  input { flex:1; min-width:200px; padding:8px; font:inherit; border:1px solid var(--bord); border-radius:6px; background:transparent; color:inherit; }
+  button.go { padding:8px 16px; font:inherit; border:0; border-radius:6px; background:var(--trace); color:#fff; cursor:pointer; }
+  button.go:disabled { opacity:.5; }
+  #status.erreur, .erreur { color:var(--alerte); } #status { min-height:1.5em; margin:8px 0; }
+  #liste { margin:8px 0; max-height:calc(100vh - 380px); min-height:160px; overflow:auto; border:1px solid var(--bord); border-radius:6px; padding:4px 8px; }
+  #liste details { margin-left:0; } #liste .enfants { margin-left:18px; border-left:1px solid var(--bord); padding-left:8px; }
+  #liste summary { cursor:pointer; padding:3px 0; } .feuille { padding:2px 0 2px 14px; font-size:.9rem; }
+  .detail { color:var(--doux); font-size:.8125rem; } .role { background:var(--bord); border-radius:4px; padding:0 6px; margin-left:6px; font-size:.75rem; }
+  .pastille { display:inline-block; width:10px; height:10px; border-radius:50%; margin-right:6px; background:var(--bord); }
+  .pastille.bon { background:var(--bon); } .pastille.mauvais { background:var(--alerte); } .pastille.ordre { background:var(--avert); } .pastille.vide { background:transparent; }
+  button.voir { font:inherit; font-size:.75rem; margin-left:6px; border:1px solid var(--bord); border-radius:4px; background:transparent; color:inherit; cursor:pointer; }
+  a { color:var(--trace); }
+  .el { cursor:pointer; border-bottom:1px dotted var(--doux); } #enquete li.selection { background:var(--surligne); border-radius:4px; } .el.selection { font-weight:600; color:var(--selection); }
+  .frise-pistes { position:relative; height:34px; margin:12px 0 2px; }
+  #frise-fond { position:absolute; left:8px; right:8px; top:12px; height:10px; background:var(--bord); border-radius:5px; overflow:hidden; }
+  #frise-fond .repere { position:absolute; top:0; width:1px; height:100%; background:var(--doux); opacity:.5; }
+  #frise-fond .bande { position:absolute; top:0; height:100%; background:var(--alerte); opacity:.85; }
+  #frise-fond .bande.incertaine { background:repeating-linear-gradient(45deg, var(--alerte) 0 4px, transparent 4px 8px); }
+  .frise-pistes input[type=range] { position:absolute; left:0; top:0; width:100%; height:34px; margin:0; background:transparent; pointer-events:none; -webkit-appearance:none; appearance:none; }
+  .frise-pistes input[type=range]::-webkit-slider-runnable-track { background:transparent; height:34px; }
+  .frise-pistes input[type=range]::-moz-range-track { background:transparent; height:34px; }
+  .frise-pistes input[type=range]::-webkit-slider-thumb { -webkit-appearance:none; pointer-events:auto; width:14px; height:28px; margin-top:3px; border-radius:4px; background:var(--trace); border:2px solid var(--fond); cursor:ew-resize; }
+  .frise-pistes input[type=range]::-moz-range-thumb { pointer-events:auto; width:10px; height:24px; border-radius:4px; background:var(--trace); border:2px solid var(--fond); cursor:ew-resize; }
+  .frise-pistes input[type=range]:focus-visible::-webkit-slider-thumb { outline:2px solid var(--selection); }
+  .frise-dates { display:flex; justify-content:space-between; font-size:.875rem; } .actions { margin:8px 0; }
+  .note { display:block; margin:2px 0 2px 16px; padding:2px 8px; border-left:3px solid var(--avert); background:var(--surligne); font-size:.8125rem; border-radius:0 4px 4px 0; }
+  .discussion blockquote { margin:4px 0 4px 8px; padding:2px 8px; border-left:3px solid var(--bord); font-size:.875rem; }
+  .feuille[data-sel] { cursor:pointer; } .feuille.selection { background:var(--surligne); outline:2px solid var(--selection); border-radius:4px; }
+  svg .voie.sel { stroke:var(--selection); stroke-width:5; } svg .touche { cursor:pointer; }
+  svg circle { cursor:pointer; } svg circle.sel { fill:var(--selection); }
+  .duo { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:16px; align-items:start; }
+  .droite { position:sticky; top:8px; }
+  #carte { position:relative; height:calc(100vh - 210px); min-height:320px; }
+  #carte > p { color:var(--doux); }
+  @media (max-width: 900px) { .duo { grid-template-columns:minmax(0,1fr); } .droite { position:static; } #carte { height:70vh; } }
+  #carte svg { width:100%; height:100%; border:1px solid var(--bord); border-radius:6px; touch-action:none; cursor:grab; }
+  #carte svg.glisse { cursor:grabbing; }
+  #enquete { margin:16px 0; } .periode { border-left:4px solid var(--alerte); padding:0 12px; margin:12px 0; } .limite { color:var(--doux); font-size:.875rem; }
+  .zoom { position:absolute; top:8px; right:8px; display:flex; flex-direction:column; gap:4px; }
+  .zoom button { width:34px; height:34px; border:1px solid var(--bord); border-radius:6px; background:var(--fond); color:var(--texte); font:inherit; font-size:18px; cursor:pointer; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Filum</h1>
+  <p class="sous">Détecte les discontinuités d'une relation OpenStreetMap.</p>
+  <div class="ligne">
+    <input id="relation" type="text" inputmode="numeric" placeholder="Identifiant de relation (ex. 7444, 12586521)" aria-label="Identifiant de relation">
+    <button id="go" class="go">Analyser</button>
+  </div>
+  <div id="status" role="status"></div>
+  <div class="duo">
+    <div class="gauche">
+      <p id="resume"></p>
+      <div id="liste"></div>
+      <section id="enquete"></section>
+    </div>
+    <div class="droite"><div id="carte"></div></div>
+  </div>
+</main>
+<script src="src/continuity.js"></script>
+<script src="src/osmapi.js"></script>
+<script src="src/viewport.js"></script>
+<script src="src/forensic.js"></script>
+<script src="src/frise.js"></script>
+<script src="src/tree.js"></script>
+<script src="src/app.js"></script>
+</body>
+</html>
