@@ -2,7 +2,7 @@
   'use strict';
   var F = window.Filum;
   var $ = function (id) { return document.getElementById(id); };
-  var state = { snapshot: null, results: [], nodes: {}, loaded: {}, tree: null, index: [], selected: null, map: null, live: null, frise: null, friseToken: 0, shown: null };
+  var state = { snapshot: null, results: [], nodes: {}, loaded: {}, tree: null, index: [], selected: null, map: null, live: null, frise: null, friseToken: 0, shown: null, window: null };
 
   function esc(s) {
     return String(s).replace(/[&<>"]/g, function (c) {
@@ -34,7 +34,8 @@
   }
 
   function summaryText(n) {
-    var s = n.summary, parts = [n.children.filter(function (c) { return c.kind !== 'gap' && c.kind !== 'order'; }).length + ' membre(s)'];
+    var s = n.summary, shown = n.children.filter(function (c) { return c.kind !== 'gap' && c.kind !== 'order'; }).length;
+    var parts = [n.hiddenCount === undefined ? shown + ' membre(s)' : shown + ' touché(s) affiché(s), ' + n.hiddenCount + ' masqué(s)'];
     parts.push(s.isPolygon ? 'polygone' : s.pieces + ' morceau(x)');
     if (s.gaps) parts.push(s.gaps + ' trou(s)');
     if (s.openEnds) parts.push(s.openEnds + ' bout(s) ouvert(s)');
@@ -58,9 +59,59 @@
     }).join('');
   }
 
+  function eventText(e) {
+    if (e.action === 'created') return e.kind === 'relation' ? 'relation créée' : 'créé';
+    if (e.action === 'deleted') return 'supprimé';
+    if (e.action === 'added-to-relation') return 'ajouté à la relation' + (e.role ? ' (rôle ' + e.role + ')' : '');
+    if (e.action === 'removed-from-relation') return 'retiré de la relation';
+    if (e.action === 'role-changed') return 'rôle : ' + (e.before || 'aucun') + ' → ' + (e.after || 'aucun');
+    var parts = [];
+    if (e.nodes) {
+      if (e.nodes.removed.length) parts.push('−' + e.nodes.removed.length + ' nœud(s)');
+      if (e.nodes.added.length) parts.push('+' + e.nodes.added.length + ' nœud(s)');
+      if (e.nodes.endsChanged) parts.push('extrémités changées');
+    }
+    if (e.tags && e.tags.length) parts.push('tags : ' + e.tags.map(function (t) { return t.key; }).join(', '));
+    if (e.members && (e.members.added || e.members.removed)) parts.push('membres +' + e.members.added + ' −' + e.members.removed);
+    return 'modifié' + (parts.length ? ' (' + parts.join(', ') + ')' : '');
+  }
+
+  function eventLine(e) {
+    return '<div class="ev ev-' + e.action + '">' + esc(eventText(e)) + ' <span class="detail">par ' + esc(e.user) + ', '
+      + fmtDate(e.date) + ', <a href="https://www.openstreetmap.org/changeset/' + e.changeset
+      + '" target="_blank" rel="noopener">changeset ' + e.changeset + '</a></span></div>';
+  }
+
+  // Les nombreuses versions de la relation sont résumées en une ligne, détail à ouvrir.
+  function relationEventsHtml(n) {
+    var added = 0, removed = 0, tags = 0;
+    n.events.forEach(function (e) {
+      if (e.members) { added += e.members.added; removed += e.members.removed; }
+      if (e.tags && e.tags.length) tags++;
+    });
+    return '<details class="evenements ev-groupe"><summary>La relation a été modifiée ' + n.events.length + ' fois dans la période (v'
+      + n.events[0].version + ' à v' + n.events[n.events.length - 1].version + ') : +' + added + ' et −' + removed + ' membre(s)'
+      + (tags ? ', ' + tags + ' changement(s) de tags' : '') + '</summary>' + n.events.map(eventLine).join('') + '</details>';
+  }
+
+  function eventsHtml(n) {
+    if (!n.events || !n.events.length) return '';
+    if (n.kind === 'relation' && n.events.length > 2) return relationEventsHtml(n);
+    return '<div class="evenements">' + n.events.map(function (e) {
+      return '<div class="ev ev-' + e.action + '">' + esc(eventText(e)) + ' <span class="detail">par ' + esc(e.user) + ', '
+        + fmtDate(e.date) + ', <a href="https://www.openstreetmap.org/changeset/' + e.changeset
+        + '" target="_blank" rel="noopener">changeset ' + e.changeset + '</a></span></div>';
+    }).join('') + '</div>';
+  }
+
   function nodeIds(list) { return list.map(function (id) { return '#' + id; }).join(' ou '); }
 
   function rowHtml(n) {
+    if (n.removed) {
+      return '<span class="pastille vide"></span>' + (n.kind === 'way' ? 'chemin ' : n.kind === 'node' ? 'nœud ' : 'relation ')
+        + osmLink(n.kind, n.id) + (n.role ? '<span class="role">' + esc(n.role) + '</span>' : '')
+        + ' <span class="detail">n\'est plus dans la relation à la date de fin</span>';
+    }
     if (n.kind === 'gap') {
       return '<span class="pastille mauvais"></span><strong>Trou</strong> : le chemin ' + osmLink('way', n.fromRef)
         + ' (bout libre : nœud ' + nodeIds(n.fromEnds) + ') ne se raccorde pas au chemin ' + osmLink('way', n.toRef)
@@ -76,7 +127,7 @@
       if (n.missing) return '<div class="ligne-arbre">relation ' + osmLink('relation', n.id) + ' absente des données chargées' + role + '</div>';
       return '<span class="pastille ' + n.status + '"></span><strong>' + esc(n.name || 'relation') + '</strong> '
         + osmLink('relation', n.id) + role + ' <span class="detail">' + summaryText(n) + ' · ' + metaText(n) + '</span> '
-        + '<button class="voir" data-act="map" data-id="' + n.id + '">Tracé</button>' + notesHtml(n);
+        + (state.window ? '' : '<button class="voir" data-act="map" data-id="' + n.id + '">Tracé</button>') + notesHtml(n);
     }
     if (n.kind === 'way') {
       if (n.missing) return 'chemin ' + osmLink('way', n.id) + ' absent des données chargées' + role;
@@ -92,11 +143,11 @@
     var hasKids = n.kind === 'relation' && n.children.length;
     if (!hasKids) {
       var sel = selKey(n);
-      return '<div class="feuille ' + n.kind + '"' + (sel ? ' data-sel="' + sel + '"' : '') + '>' + rowHtml(n) + '</div>';
+      return '<div class="feuille ' + n.kind + '"' + (sel ? ' data-sel="' + sel + '"' : '') + '>' + rowHtml(n) + eventsHtml(n) + '</div>';
     }
     var key = state.index.length;
     state.index.push(n);
-    return '<details data-key="' + key + '"' + (open ? ' open' : '') + '><summary>' + rowHtml(n) + '</summary>'
+    return '<details data-key="' + key + '"' + (open ? ' open' : '') + '><summary>' + rowHtml(n) + '</summary>' + eventsHtml(n)
       + '<div class="enfants">' + (open ? n.children.map(function (c) { return nodeHtml(c, false); }).join('') : '') + '</div></details>';
   }
 
@@ -116,20 +167,25 @@
     $('liste').innerHTML = nodeHtml(state.tree, true);
   }
 
-  async function showMap(result) {
-    useLive();
+  function visibleWayRefs(relId) {
+    var refs = F.wayRefsOf(state.snapshot, relId);
+    return state.window ? refs.filter(function (id) { return state.window.ways[id]; }) : refs;
+  }
+
+  async function showMap(result, keepView) {
+    if (!keepView) useLive();
     state.shown = result.relationId;
-    var wayIds = F.wayRefsOf(state.snapshot, result.relationId);
+    var wayIds = visibleWayRefs(result.relationId);
     $('carte').innerHTML = '<p>Chargement du tracé...</p>';
     try {
       var missing = (await F.fetchNodes(state.snapshot, wayIds.filter(function (id) { return !state.loaded[id]; }))) || [];
       missing.forEach(function (n) { state.nodes[n.id] = n; });
       wayIds.forEach(function (id) { state.loaded[id] = true; });
-      renderMap(result);
-      renderEnquete(result);
     } catch (e) {
-      $('carte').innerHTML = '<p class="erreur">Échec du tracé : ' + esc(e.message) + '</p>';
+      // Dans une fenêtre, des nœuds d'anciens chemins peuvent avoir été supprimés : on dessine ce qu'on a.
+      if (!state.window) { $('carte').innerHTML = '<p class="erreur">Échec du tracé : ' + esc(e.message) + '</p>'; return; }
     }
+    renderMap(result);
   }
 
   function fmtDate(iso) { return iso.slice(0, 10); }
@@ -170,77 +226,97 @@
     }).join('') + '</ul>';
   }
 
-  // ---- Vues : l'état actuel (live) ou la relation reconstituée à une date ----
+  // ---- Vues : l'état actuel (live) ou une fenêtre sur les modifications d'une période ----
   function useLive() {
     state.snapshot = state.live.snapshot; state.results = state.live.results; state.tree = state.live.tree;
+    state.window = null;
   }
 
   function showView(v) {
     state.snapshot = v.snapshot; state.results = v.results; state.tree = v.tree;
     renderList();
     var shown = v.results.filter(function (r) { return r.relationId === state.shown; })[0] || v.results[0];
-    renderMap(shown);
+    return showMap(shown, true);
   }
 
-  // ---- Frise : deux curseurs, début et fin de la période étudiée ----
+  // Ce que la fenêtre affiche : chemins gardés (avec leur type de changement) et lignes de trou ou d'ordre gardées.
+  function windowState(wtree) {
+    var ways = {}, rows = {}, prio = { created: 4, modified: 3, 'added-to-relation': 2, 'role-changed': 1 };
+    wtree.children.forEach(function (c) {
+      if (c.kind === 'way' && !c.removed && !c.missing) {
+        var best = 'modified', bp = 0;
+        (c.events || []).forEach(function (e) { if ((prio[e.action] || 0) > bp) { bp = prio[e.action]; best = e.action; } });
+        ways[c.id] = best;
+      } else if (c.kind === 'gap') rows['gap:' + c.relationId + ':' + c.gapIndex] = true;
+      else if (c.kind === 'order') rows['order:' + c.relationId + ':' + c.orderIndex] = true;
+    });
+    return { ways: ways, rows: rows };
+  }
+
+  // ---- Frise : deux curseurs, début et fin de la période étudiée, sous la recherche ----
   function nowIso() { return new Date().toISOString().replace(/\.\d+Z$/, 'Z'); }
+  function isFull(fr) { return fr.from === fr.min && fr.to === fr.max; }
 
-  function renderEnquete(result) {
-    var box = $('enquete');
-    var rel = state.live.snapshot.elements.filter(function (e) { return e.type === 'relation' && e.id === result.relationId; })[0];
-    state.frise = null;
-    state.friseToken = (state.friseToken || 0) + 1;
+  async function setupFrise(id, prev) {
+    var zone = $('frise-zone');
+    var rel = state.live.snapshot.elements.filter(function (e) { return e.type === 'relation' && e.id === id; })[0];
     if (!rel || !rel.members.some(function (m) { return m.type === 'way'; })) {
-      box.innerHTML = '<p class="detail">La frise et l\'enquête s\'appliquent à une relation qui contient directement des chemins. '
-        + 'Choisissez une sous-relation (bouton « Tracé »).</p>';
-      return;
+      state.frise = null;
+      zone.innerHTML = '<p class="detail">La frise s\'applique à une relation qui contient directement des chemins. '
+        + 'Pour une relation parente (par exemple EuroVelo), saisissez le numéro d\'une de ses sous-relations.</p>';
+      return null;
     }
-    box.innerHTML = '<div id="frise"><p class="detail">Chargement de la frise...</p></div>'
-      + '<div class="actions"><button id="enqueter" class="go">Enquêter sur la période</button></div>'
-      + '<div id="enquete-res"></div>';
-    $('enqueter').addEventListener('click', reload);
-    loadFrise(result, rel);
-  }
-
-  async function loadFrise(result, rel) {
-    var token = state.friseToken;
-    try {
-      var hist = await F.fetchRelationHistory(result.relationId);
-      if (token !== state.friseToken) return;
-      var seen = {};
-      rel.members.forEach(function (m) { if (m.type === 'way') seen[m.ref] = true; });
-      var min = hist[0].timestamp, max = nowIso();
-      state.frise = { relId: result.relationId, hist: hist, min: min, max: max, from: min, to: max,
-        ctx: null, allSpans: null, totalWays: Object.keys(seen).length };
-      buildFrise();
-    } catch (e) {
-      if (token === state.friseToken) $('frise').innerHTML = '<p class="erreur">Frise indisponible : ' + esc(e.message) + '</p>';
+    var fr = prev, max = nowIso();
+    if (!fr) {
+      zone.innerHTML = '<p class="detail">Chargement de la frise...</p>';
+      var hist = await F.fetchRelationHistory(id);
+      fr = { relId: id, hist: hist, min: hist[0].timestamp, max: max, from: hist[0].timestamp, to: max, toIsMax: true,
+        ctx: null, points: null, allSpans: null, applied: null, loading: false, stop: false, progress: null, failedCount: 0 };
+    } else {
+      fr.max = max;
+      if (fr.toIsMax) fr.to = max;
     }
+    state.frise = fr;
+    buildFrise();
+    return fr;
   }
 
   function buildFrise() {
-    $('frise').innerHTML = '<div class="frise-pistes"><div id="frise-fond"></div>'
-      + '<input type="range" id="cur-g" min="0" max="1000" value="0" aria-label="Début de la période">'
-      + '<input type="range" id="cur-d" min="0" max="1000" value="1000" aria-label="Fin de la période"></div>'
+    var fr = state.frise;
+    $('frise-zone').innerHTML = '<div class="frise-pistes"><div id="frise-fond"></div>'
+      + '<input type="range" id="cur-g" min="0" max="1000" aria-label="Début de la période">'
+      + '<input type="range" id="cur-d" min="0" max="1000" aria-label="Fin de la période"></div>'
       + '<div class="frise-dates"><span id="date-g"></span><span id="date-d"></span></div>'
-      + '<div id="frise-legende" class="detail"></div><div id="vue-date" class="detail"></div>';
+      + '<div id="frise-legende" class="detail"></div><div id="frise-aide" class="aide"></div>'
+      + '<div id="charge" class="charge"></div><div id="frise-note" class="detail"></div>';
+    $('cur-g').value = Math.round(F.toFraction(fr.from, fr.min, fr.max) * 1000);
+    $('cur-d').value = fr.toIsMax ? 1000 : Math.round(F.toFraction(fr.to, fr.min, fr.max) * 1000);
     function onMove(side) {
-      var g = $('cur-g'), d = $('cur-d'), fr = state.frise;
+      var g = $('cur-g'), d = $('cur-d');
       if (side === 'g' && Number(g.value) > Number(d.value)) g.value = d.value;
       if (side === 'd' && Number(d.value) < Number(g.value)) d.value = g.value;
       fr.from = Number(g.value) === 0 ? fr.min : F.fromFraction(Number(g.value) / 1000, fr.min, fr.max);
-      fr.to = Number(d.value) === 1000 ? fr.max : F.fromFraction(Number(d.value) / 1000, fr.min, fr.max);
+      fr.toIsMax = Number(d.value) === 1000;
+      fr.to = fr.toIsMax ? fr.max : F.fromFraction(Number(d.value) / 1000, fr.min, fr.max);
       paintFrise();
     }
     $('cur-g').addEventListener('input', function () { onMove('g'); });
     $('cur-d').addEventListener('input', function () { onMove('d'); });
+    $('charge').addEventListener('click', function (e) {
+      var b = e.target.closest('button');
+      if (!b) return;
+      if (b.dataset.act === 'charger') loadAll();
+      else if (b.dataset.act === 'pause') fr.stop = true;
+    });
     paintFrise();
+    paintCharge();
   }
 
   function paintFrise() {
     var fr = state.frise, html = '';
-    if (!$('frise-fond')) return;
-    var uncertain = fr.ctx && Object.keys(fr.ctx.wayHistories).length < fr.totalWays;
+    if (!fr || !$('frise-fond')) return;
+    var pending = fr.ctx ? F.wayIdsToLoad(fr.ctx, fr.max).length : null;
+    var uncertain = pending === null ? false : pending > 0;
     if (fr.allSpans) {
       html += F.bandsOf(fr.allSpans, fr.min, fr.max).map(function (b) {
         return '<div class="bande' + (b.open ? ' ouverte' : '') + (uncertain ? ' incertaine' : '') + '" style="left:'
@@ -250,63 +326,148 @@
     html += F.tickFractions(fr.hist.map(function (v) { return v.timestamp; }), fr.min, fr.max).map(function (x) {
       return '<div class="repere" style="left:' + (x * 100) + '%"></div>';
     }).join('');
+    // voile sur ce qui est hors de la période choisie, mis à jour en direct avec les curseurs
+    var left = F.toFraction(fr.from, fr.min, fr.max) * 100, right = F.toFraction(fr.to, fr.min, fr.max) * 100;
+    html += '<div class="hors" style="left:0;width:' + left + '%"></div><div class="hors" style="left:' + right + '%;right:0"></div>';
     $('frise-fond').innerHTML = html;
     $('date-g').textContent = 'du ' + fmtDate(fr.from);
-    $('date-d').textContent = 'au ' + (fr.to === fr.max ? 'aujourd\'hui' : fmtDate(fr.to));
+    $('date-d').textContent = 'au ' + (fr.toIsMax ? 'aujourd\'hui' : fmtDate(fr.to));
     $('frise-legende').textContent = 'Traits : versions de la relation (' + fr.hist.length + ').'
-      + (fr.allSpans ? ' Rouge : relation cassée.' : '')
-      + (uncertain ? ' Rayé : période approximative, ' + Object.keys(fr.ctx.wayHistories).length + ' chemin(s) sur '
-        + fr.totalWays + ' ont leur historique lu.' : '');
+      + (fr.allSpans ? ' Rouge : périodes où la relation est cassée (toute son histoire, ne dépend pas des curseurs). Zone grisée : hors de la période choisie.'
+        : ' Les périodes où la relation est cassée (en rouge) apparaîtront après la lecture de l\'historique : choisissez une période puis « Analyser ».')
+      + (uncertain ? ' Rayé : période approximative, il reste ' + pending + ' chemin(s) dont l\'historique n\'est pas lu.' : '');
+    var changed = !fr.applied || fr.applied.from !== fr.from || fr.applied.to !== fr.to;
+    $('frise-aide').textContent = changed ? 'Période modifiée : cliquez sur « Analyser » pour l\'appliquer.' : '';
   }
 
-  // Charge l'historique (une fois), recalcule les périodes de rupture de la fenêtre choisie,
-  // et affiche la relation telle qu'elle était à la date de fin.
-  async function reload() {
-    var fr = state.frise;
-    if (!fr) return;
-    var out = $('enquete-res');
-    $('enqueter').disabled = true;
-    out.innerHTML = '<p>Lecture de l\'historique...</p>';
-    try {
-      if (!fr.ctx) {
-        var liveRes = state.live.results.filter(function (r) { return r.relationId === fr.relId; })[0];
-        var border = F.borderWayRefs(state.live.snapshot, fr.relId, liveRes);
-        fr.ctx = await F.fetchHistoryContext(fr.relId, state.live.snapshot, border, undefined, 60);
-        fr.allSpans = F.findBreaks(fr.ctx, fr.relId);
-        if (state.frise !== fr) return;
-        paintFrise();
-      }
-      var spans = F.clipSpans(F.findBreaks(F.truncateCtx(fr.ctx, fr.to), fr.relId), fr.from);
-      await renderSpans(out, spans, fr);
-      applyDateView();
-    } catch (e) {
-      out.innerHTML = '<p class="erreur">Échec de l\'enquête : ' + esc(e.message) + '</p>';
-    } finally {
-      $('enqueter').disabled = false;
-    }
+  // Historique de la relation et des chemins aux bords des trous (rapide). Le reste se charge à la demande.
+  async function ensureCtx(fr) {
+    if (fr.ctx) return;
+    var liveRes = state.live.results.filter(function (r) { return r.relationId === fr.relId; })[0];
+    var border = F.borderWayRefs(state.live.snapshot, fr.relId, liveRes);
+    fr.ctx = await F.fetchHistoryContext(fr.relId, state.live.snapshot, border, undefined, 60);
+    fr.points = null;
   }
 
-  function applyDateView() {
-    var fr = state.frise, note = $('vue-date');
-    if (fr.to === fr.max) {
-      if (state.snapshot !== state.live.snapshot) { useLive(); showView(state.live); }
-      note.textContent = '';
+  // Timeline calculée par tranches (la page reste utilisable), une seule fois par état de l'historique chargé.
+  async function ensurePoints(fr, out) {
+    if (fr.points) return;
+    var points = await F.timelineAsync(fr.ctx, fr.relId, { chunk: 100, onProgress: function (done, total) {
+      if (state.frise === fr) out.innerHTML = '<p>Calcul des périodes de rupture : ' + done + ' / ' + total + ' dates...</p>';
+    } });
+    if (state.frise !== fr) return;
+    fr.points = points;
+    fr.allSpans = F.spansOf(points);
+    paintFrise();
+  }
+
+  function paintCharge() {
+    var fr = state.frise, box = $('charge');
+    if (!fr || !box) return;
+    $('go').disabled = !!fr.loading;
+    if (fr.loading) {
+      var p = fr.progress || { done: 0, total: 0, failed: [] };
+      box.innerHTML = '<progress max="' + (p.total || 1) + '" value="' + p.done + '"></progress> Lecture de l\'historique des chemins : '
+        + p.done + ' / ' + (p.total || '...') + (p.failed.length ? ' (' + p.failed.length + ' en échec)' : '')
+        + ' <button class="voir" data-act="pause">Pause</button>';
       return;
     }
-    var snap = F.stateAt(fr.to, fr.ctx, fr.relId);
-    if (!snap) { note.textContent = 'La relation n\'existait pas encore à cette date.'; return; }
-    showView({ snapshot: snap, results: F.analyzeTree(snap, fr.relId), tree: F.buildTree(snap, fr.relId) });
-    var rel = snap.elements[0], seen = {}, unread = 0, total = 0;
-    rel.members.forEach(function (m) {
-      if (m.type !== 'way' || seen[m.ref]) return;
-      seen[m.ref] = true; total++;
-      if (!fr.ctx.wayHistories[m.ref]) unread++;
-    });
-    note.className = unread ? 'erreur' : 'detail';
-    note.textContent = 'Arbre et carte au ' + fmtDate(fr.to) + ' : état reconstitué. '
-      + (unread ? 'ATTENTION, NON FIABLE : ' + unread + ' chemin(s) sur ' + total + ' n\'ont pas leur historique lu et sont pris dans leur état '
-        + 'actuel, le nombre de trous et de morceaux est très probablement surestimé. ' : 'Tous les chemins ont leur historique lu. ')
-      + 'Les sous-relations et les positions ne sont pas reconstituées.';
+    var pending = fr.ctx ? F.wayIdsToLoad(fr.ctx, fr.max).length : null;
+    if (fr.ctx && pending === 0) {
+      box.innerHTML = '<span class="detail">Historique complet lu.' + (fr.failedCount ? ' ' + fr.failedCount + ' chemin(s) en échec.' : '') + '</span>';
+      return;
+    }
+    var n = pending === null ? fr.totalWays : pending, secs = Math.max(1, Math.round(n * 0.03));
+    box.innerHTML = '<button class="voir" data-act="charger">' + (fr.progress ? 'Reprendre' : 'Charger tout l\'historique')
+      + '</button> <span class="detail">' + (pending === null ? 'environ ' : '') + n + ' chemin(s) à lire, environ ' + secs
+      + ' s, par pages de 80 (8 appels en parallèle). Se lance tout seul quand vous choisissez une période.</span>';
+  }
+
+  // Lit l'historique des chemins qui restent, page par page. S'arrête à la pause, reprend où il en était.
+  async function loadHistory(fr) {
+    if (fr.loading) return;
+    fr.loading = true; fr.stop = false; fr.progress = { done: 0, total: 0, failed: [] };
+    paintCharge();
+    try {
+      await ensureCtx(fr);
+      var ids = F.wayIdsToLoad(fr.ctx, fr.to);
+      var res = await F.fetchWayHistories(ids, fr.ctx, undefined, {
+        onPage: function (p) { if (state.frise === fr) { fr.progress = p; paintCharge(); } },
+        shouldStop: function () { return fr.stop || state.frise !== fr; },
+      });
+      fr.failedCount += res.failed.length;
+      if (res.done) fr.points = null;
+    } catch (e) {
+      if (state.frise === fr) $('charge').innerHTML = '<span class="erreur">Échec du chargement : ' + esc(e.message) + '</span>';
+    }
+    fr.loading = false;
+    if (state.frise === fr) paintCharge();
+  }
+
+  async function loadAll() {
+    var fr = state.frise;
+    if (!fr || fr.loading) return;
+    await loadHistory(fr);
+    if (state.frise === fr) await applyPeriod();
+  }
+
+  // Applique la période choisie : période complète = vue actuelle ; sinon fenêtre sur les modifications
+  // (créées, modifiées, ajoutées, retirées, supprimées entre les deux dates), état complet à la date de fin.
+  async function applyPeriod() {
+    var fr = state.frise;
+    if (!fr) return;
+    fr.applied = { from: fr.from, to: fr.to };
+    paintFrise();
+    $('enquete').innerHTML = '<div id="enquete-res"></div>';
+    var out = $('enquete-res');
+    if (isFull(fr) && !fr.ctx) {
+      useLive(); renderList();
+      out.innerHTML = '<p class="detail">Période complète : vue actuelle. Choisissez une période avec les curseurs puis cliquez sur « Analyser » '
+        + 'pour voir ce qui a été modifié, ajouté ou supprimé.</p>';
+      return;
+    }
+    try {
+      await ensureCtx(fr);
+      if (!isFull(fr)) await loadHistory(fr);
+      if (state.frise !== fr) return;
+      await ensurePoints(fr, out);
+      if (state.frise !== fr) return;
+      paintCharge();
+      var spans = F.clipSpans(F.spansOf(fr.points.filter(function (p) { return p.date <= fr.to; })), fr.from);
+      await renderSpans(out, spans, fr);
+      if (isFull(fr)) {
+        $('frise-note').textContent = '';
+        if (state.snapshot !== state.live.snapshot) { useLive(); renderList(); await showMap(state.live.results[0], true); }
+        return;
+      }
+      await showWindow(fr);
+    } catch (e) {
+      out.innerHTML = '<p class="erreur">Échec de l\'analyse de la période : ' + esc(e.message) + '</p>';
+    }
+  }
+
+  async function showWindow(fr) {
+    var events = F.windowChanges(fr.ctx, fr.relId, fr.from, fr.to), snap, results, tree;
+    if (fr.toIsMax) { snap = state.live.snapshot; results = state.live.results; tree = state.live.tree; }
+    else {
+      snap = F.stateAt(fr.to, fr.ctx, fr.relId);
+      if (!snap) { $('frise-note').textContent = 'La relation n\'existait pas encore à cette date.'; return; }
+      results = F.analyzeTree(snap, fr.relId); tree = F.buildTree(snap, fr.relId);
+    }
+    var wtree = F.windowTree(tree, events);
+    state.window = windowState(wtree);
+    state.shown = fr.relId;
+    await showView({ snapshot: snap, results: results, tree: wtree });
+    var r = results.filter(function (x) { return x.relationId === fr.relId; })[0];
+    var shownCount = wtree.children.filter(function (c) { return c.kind !== 'gap' && c.kind !== 'order'; }).length;
+    $('resume').textContent = 'Période du ' + fmtDate(fr.from) + ' au ' + (fr.toIsMax ? 'aujourd\'hui' : fmtDate(fr.to)) + ' : '
+      + shownCount + ' élément(s) touché(s) affiché(s), ' + wtree.hiddenCount + ' masqué(s) (non modifiés dans la période). '
+      + 'État à la date de fin, relation complète : ' + (r ? r.gaps.length + ' trou(s), ' + r.pieces.length + ' morceau(x)' : 'inconnu') + '.';
+    var pending = F.wayIdsToLoad(fr.ctx, fr.max).length;
+    $('frise-note').className = pending ? 'erreur' : 'detail';
+    $('frise-note').textContent = pending
+      ? 'ATTENTION : il reste ' + pending + ' chemin(s) dont l\'historique n\'est pas lu, les changements de la période peuvent être incomplets.'
+      : 'Les changements affichés sont ceux de la période. Positions des nœuds et sous-relations non reconstituées.';
   }
 
   async function renderSpans(out, spans, fr) {
@@ -314,25 +475,34 @@
     try { changesets = await F.fetchChangesets(F.changesetIds(spans)); } catch (e) { changesets = {}; }
     try { discussions = await F.fetchDiscussions(changesets); } catch (e) { discussions = {}; }
     if (state.frise !== fr) return;
-    var atDate = fr.to !== fr.max;
-    var html = '<p class="detail">Période étudiée : du ' + fmtDate(fr.from) + ' au ' + (atDate ? fmtDate(fr.to) : 'aujourd\'hui') + '.</p>';
+    var atDate = !fr.toIsMax;
+    var html = '<p class="detail">Périodes de rupture, du ' + fmtDate(fr.from) + ' au ' + (atDate ? fmtDate(fr.to) : 'aujourd\'hui') + '.</p>';
     if (!spans.length) {
-      html += '<p>Aucune période de rupture trouvée sur cette période dans l\'historique chargé. Un trou peut venir d\'un chemin '
-        + 'dont l\'historique n\'a pas été lu (voir les limites ci-dessous).</p>';
+      html += '<p>Aucune période de rupture sur cette période dans l\'historique chargé.</p>';
     }
-    spans.forEach(function (sp) {
-      html += '<div class="periode"><p><strong>' + (sp.end ? 'Rupture réparée' : (atDate ? 'Rupture non réparée à cette date' : 'Rupture en cours'))
+    var parts = F.splitSpans(spans, 86400000);
+    function spanHtml(sp) {
+      return '<div class="periode"><p><strong>' + (sp.end ? 'Rupture réparée' : (atDate ? 'Rupture non réparée à cette date' : 'Rupture en cours'))
         + '</strong> : depuis le ' + fmtDate(sp.start.date) + (sp.fromCreation ? ' (dès la création de la relation)' : '')
         + (sp.startsBeforeWindow ? ' (commencée avant la période étudiée)' : '')
         + (sp.end ? ', jusqu\'au ' + fmtDate(sp.end.date) : '') + '.</p>'
         + '<p>Modification(s) à ce moment : </p>' + causesHtml(sp.start.causes, changesets, discussions)
         + (sp.end ? '<p>Réparation : </p>' + causesHtml(sp.end.causes, changesets, discussions) : '')
         + '</div>';
-    });
+    }
+    parts.long.forEach(function (sp) { html += spanHtml(sp); });
+    if (parts.brief.length) {
+      html += '<details class="breves"><summary>' + parts.brief.length + ' rupture(s) brève(s), de moins d\'un jour (le plus souvent '
+        + 'une édition faite en plusieurs envois)</summary>' + parts.brief.map(spanHtml).join('') + '</details>';
+    }
+    var pending = F.wayIdsToLoad(fr.ctx, fr.max).length;
     html += '<p class="limite">Ce sont des pistes, pas des preuves : une modification au moment de la rupture '
       + 'n\'est pas forcément une faute (la personne a pu réparer ou raccrocher un autre chemin). '
-      + 'Seuls les chemins aux bords des trous et ceux retirés de la relation ont leur historique lu, les autres '
-      + 'sont pris dans leur état actuel.' + (fr.ctx.truncated ? ' Limite de 60 chemins atteinte : certains ont été ignorés.' : '') + '</p>';
+      + (pending
+        ? 'Il reste ' + pending + ' chemin(s) dont l\'historique n\'est pas lu : ils sont pris dans leur état actuel, ce qui peut '
+          + 'inventer ou cacher des ruptures, surtout les plus anciennes. Utilisez « Charger tout l\'historique ».'
+        : 'L\'historique de tous les chemins a été lu' + (fr.failedCount ? ' (sauf ' + fr.failedCount + ' en échec)' : '')
+          + ' ; les positions des nœuds et les sous-relations ne sont pas reconstituées.') + '</p>';
     out.innerHTML = html;
     highlightEnquete(state.selected);
   }
@@ -352,10 +522,10 @@
     var nodes = state.nodes, ways = {};
     state.snapshot.elements.forEach(function (e) { if (e.type === 'way') ways[e.id] = e; });
     var lines = [], pts = [];
-    F.wayRefsOf(state.snapshot, result.relationId).forEach(function (ref) {
+    visibleWayRefs(result.relationId).forEach(function (ref) {
       if (!ways[ref]) return;
-      var p = ways[ref].nodes.map(function (n) { return nodes[n]; }).filter(Boolean);
-      if (p.length) { lines.push({ id: ref, pts: p }); pts = pts.concat(p); }
+      var p = ways[ref].nodes.map(function (n) { return nodes[n]; }).filter(function (n) { return n && typeof n.lat === 'number'; });
+      if (p.length) { lines.push({ id: ref, pts: p, action: state.window ? state.window.ways[ref] : '' }); pts = pts.concat(p); }
     });
     if (!pts.length) { $('carte').innerHTML = '<p>Aucune géométrie à afficher.</p>'; return; }
     var minLat = Math.min.apply(null, pts.map(function (p) { return p.lat; }));
@@ -376,11 +546,12 @@
       var pts2 = l.pts.map(function (q) { return X(q) + ',' + Y(q); }).join(' ');
       svg += '<polyline class="touche" fill="none" stroke="transparent" stroke-width="14" vector-effect="non-scaling-stroke" '
         + 'data-sel="way:' + l.id + '" points="' + pts2 + '"/>'
-        + '<polyline class="voie" fill="none" stroke="var(--trace)" stroke-width="2" vector-effect="non-scaling-stroke" '
+        + '<polyline class="voie ' + (l.action || '') + '" fill="none" stroke="var(--trace)" stroke-width="2" vector-effect="non-scaling-stroke" '
         + 'data-way="' + l.id + '" points="' + pts2 + '"/>';
     });
     function dots(list, color, kind, relId) {
       list.forEach(function (g, i) {
+        if (state.window && kind !== 'open' && !state.window.rows[kind + ':' + relId + ':' + i]) return;
         g.fromEnds.concat(g.toEnds).forEach(function (id) {
           var n = nodes[id];
           if (n) svg += '<circle class="pastille-carte" data-sel="' + kind + ':' + relId + ':' + i + '" cx="' + X(n)
@@ -556,24 +727,31 @@
   async function run() {
     var id = parseRelationId($('relation').value);
     if (!id) { setStatus('Indiquez un identifiant de relation (par exemple 7444).', true); return; }
+    var prev = state.frise && state.frise.relId === id ? state.frise : null;
+    if (prev && prev.loading) return;
+    var token = ++state.friseToken;
+    if (!prev) { state.frise = null; $('frise-zone').innerHTML = ''; }
     $('go').disabled = true;
     $('liste').innerHTML = ''; $('carte').innerHTML = ''; $('resume').textContent = ''; $('enquete').innerHTML = '';
     setStatus('Chargement de la relation ' + id + '...');
     try {
-      state.nodes = {}; state.loaded = {}; state.selected = null;
+      state.nodes = {}; state.loaded = {}; state.selected = null; state.window = null;
       state.snapshot = await F.fetchTree(id);
       state.results = F.analyzeTree(state.snapshot, id);
       state.tree = F.buildTree(state.snapshot, id);
       state.live = { snapshot: state.snapshot, results: state.results, tree: state.tree };
-      state.frise = null; state.friseToken = (state.friseToken || 0) + 1;
       if (!state.results.length) throw new Error('Relation ' + id + ' introuvable.');
       setStatus('');
       renderList();
-      showMap(state.results[0]);
+      await showMap(state.results[0]);
+      if (token !== state.friseToken) return;
+      var fr = await setupFrise(id, prev);
+      if (token !== state.friseToken) return;
+      if (fr) await applyPeriod();
     } catch (e) {
       setStatus('Échec : ' + e.message, true);
     } finally {
-      $('go').disabled = false;
+      $('go').disabled = !!(state.frise && state.frise.loading);
     }
   }
 

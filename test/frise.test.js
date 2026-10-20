@@ -88,3 +88,36 @@ test('tickFractions : positions uniques triées des dates données', () => {
   assert.strictEqual(f[0], 0);
   assert.strictEqual(f[2], 1);
 });
+
+const { splitSpans } = require('../src/frise.js');
+const DAY = 86400000;
+
+test('splitSpans : les ruptures de moins d\'un jour sont brèves, les autres et celles en cours sont longues', () => {
+  const spans = [
+    span('2020-01-01T10:00:00Z', '2020-01-01T10:05:00Z'),
+    span('2020-02-01T00:00:00Z', '2020-03-01T00:00:00Z'),
+    span('2021-01-01T00:00:00Z', null),
+  ];
+  const r = splitSpans(spans, DAY);
+  assert.deepStrictEqual(r.brief.map(s => s.start.date), ['2020-01-01T10:00:00Z']);
+  assert.deepStrictEqual(r.long.map(s => s.start.date), ['2020-02-01T00:00:00Z', '2021-01-01T00:00:00Z']);
+});
+
+test('splitSpans : une rupture d\'exactement un jour est longue', () => {
+  const r = splitSpans([span('2020-01-01T00:00:00Z', '2020-01-02T00:00:00Z')], DAY);
+  assert.strictEqual(r.long.length, 1);
+  assert.strictEqual(r.brief.length, 0);
+});
+
+test('splitSpans garde l\'ordre chronologique dans chaque groupe', () => {
+  const r = splitSpans([
+    span('2020-01-01T10:00:00Z', '2020-01-01T10:01:00Z'),
+    span('2020-05-01T10:00:00Z', '2020-05-01T10:01:00Z'),
+    span('2020-09-01T10:00:00Z', '2020-09-01T10:01:00Z'),
+  ], DAY);
+  assert.deepStrictEqual(r.brief.map(s => s.start.date.slice(0, 10)), ['2020-01-01', '2020-05-01', '2020-09-01']);
+});
+
+test('splitSpans : aucune période, deux groupes vides', () => {
+  assert.deepStrictEqual(splitSpans([], DAY), { long: [], brief: [] });
+});

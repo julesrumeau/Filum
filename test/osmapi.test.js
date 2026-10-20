@@ -232,3 +232,71 @@ test('fetchRelationHistory renvoie les versions de la relation, de la plus ancie
   assert.deepStrictEqual(calls, ['relation/100/history.json']);
   assert.deepStrictEqual(h.map(v => v.version), [1, 2, 3]);
 });
+
+const { fetchWayHistories } = require('../src/osmapi.js');
+
+function fakeWayHist(failIds) {
+  const calls = [];
+  async function getJson(path) {
+    calls.push(path);
+    const id = Number(path.match(/^way\/(\d+)\/history\.json$/)[1]);
+    if ((failIds || []).includes(id)) throw new Error('boom');
+    return { elements: [{ type: 'way', id, version: 1, timestamp: '2020-01-01T00:00:00Z', nodes: [id, id + 1] }] };
+  }
+  return { getJson, calls };
+}
+
+test('fetchWayHistories charge par pages et range les historiques dans le contexte', async () => {
+  const api = fakeWayHist();
+  const ctx = { wayHistories: {} };
+  const pages = [];
+  const res = await fetchWayHistories([1, 2, 3, 4, 5], ctx, api.getJson, { pageSize: 2, onPage: p => pages.push(p.done) });
+  assert.deepStrictEqual(Object.keys(ctx.wayHistories).sort(), ['1', '2', '3', '4', '5']);
+  assert.deepStrictEqual(pages, [2, 4, 5]);
+  assert.deepStrictEqual([res.done, res.failed.length, res.stopped], [5, 0, false]);
+});
+
+test('fetchWayHistories s\'arrête entre deux pages quand on le demande, et peut reprendre', async () => {
+  const api = fakeWayHist();
+  const ctx = { wayHistories: {} };
+  let stop = false;
+  const first = await fetchWayHistories([1, 2, 3, 4], ctx, api.getJson, { pageSize: 2, onPage: () => { stop = true; }, shouldStop: () => stop });
+  assert.strictEqual(first.stopped, true);
+  assert.strictEqual(Object.keys(ctx.wayHistories).length, 2);
+  stop = false;
+  await fetchWayHistories([3, 4], ctx, api.getJson, { pageSize: 2 });
+  assert.strictEqual(Object.keys(ctx.wayHistories).length, 4);
+});
+
+test('fetchWayHistories : un chemin en échec est signalé sans bloquer les autres', async () => {
+  const api = fakeWayHist([2]);
+  const ctx = { wayHistories: {} };
+  const res = await fetchWayHistories([1, 2, 3], ctx, api.getJson, { pageSize: 10 });
+  assert.deepStrictEqual(res.failed, [2]);
+  assert.deepStrictEqual(Object.keys(ctx.wayHistories).sort(), ['1', '3']);
+});
+
+test('fetchWayHistories ne redemande pas un chemin déjà chargé', async () => {
+  const api = fakeWayHist();
+  const ctx = { wayHistories: { 1: [] } };
+  await fetchWayHistories([1, 2], ctx, api.getJson, { pageSize: 10 });
+  assert.deepStrictEqual(api.calls, ['way/2/history.json']);
+});
+
+test('fetchWayHistories sans chemin ne fait aucun appel', async () => {
+  const api = fakeWayHist();
+  const res = await fetchWayHistories([], { wayHistories: {} }, api.getJson, {});
+  assert.strictEqual(api.calls.length, 0);
+  assert.strictEqual(res.done, 0);
+});
+
+test('fetchNodes ne renvoie que les nœuds qui ont des coordonnées (les nœuds supprimés sont écartés)', async () => {
+  const get = async (path) => ({ elements: [
+    { type: 'node', id: 100, lat: 48.5, lon: 7.7 },
+    { type: 'node', id: 101, visible: false },
+    { type: 'node', id: 102, lat: 48.6, lon: 7.8 },
+  ] });
+  const snap = { elements: [{ type: 'way', id: 1, nodes: [100, 101, 102] }] };
+  const nodes = await fetchNodes(snap, [1], get);
+  assert.deepStrictEqual(nodes.map(n => n.id), [100, 102]);
+});

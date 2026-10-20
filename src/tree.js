@@ -120,7 +120,48 @@
     return walk(tree, []);
   }
 
-  var api = { buildTree: buildTree, wayRefsOf: wayRefsOf, findPath: findPath };
+  // L'arbre vu comme une fenêtre sur les changements : ne reste que ce qui a un événement dans la période
+  // (créé, modifié, ajouté, retiré, supprimé). Les éléments retirés ou supprimés, absents de l'arbre de l'état
+  // à la date de fin, reviennent comme lignes à part. hiddenCount = éléments existants mais non touchés.
+  function windowTree(tree, events) {
+    var by = {};
+    events.forEach(function (e) { (by[e.kind + ':' + e.id] = by[e.kind + ':' + e.id] || []).push(e); });
+    function evs(kind, id) { return (by[kind + ':' + id] || []).slice().sort(function (a, b) { return a.date < b.date ? -1 : a.date > b.date ? 1 : 0; }); }
+    var kept = [], keptWays = {}, hidden = 0, present = {};
+    tree.children.forEach(function (c) {
+      if (c.kind === 'gap' || c.kind === 'order') return;
+      present[c.kind + ':' + c.id] = true;
+      var e = evs(c.kind, c.id);
+      if (!e.length) { hidden++; return; }
+      kept.push(Object.assign({}, c, { events: e }));
+      if (c.kind === 'way') keptWays[c.id] = true;
+    });
+    // lignes de trou et d'ordre, gardées si l'un des deux chemins reste visible, à leur place d'origine
+    var out = [], k = 0;
+    tree.children.forEach(function (c) {
+      if (c.kind === 'gap' || c.kind === 'order') {
+        if (keptWays[c.fromRef] || keptWays[c.toRef]) out.push(c);
+        return;
+      }
+      var e = evs(c.kind, c.id);
+      if (e.length) out.push(kept[k++]);
+    });
+    // éléments retirés ou supprimés : plus dans l'arbre de l'état à la date de fin
+    var removedKeys = [];
+    events.forEach(function (e) {
+      var key = e.kind + ':' + e.id;
+      if (!present[key] && e.kind !== 'relation' && removedKeys.indexOf(key) < 0) removedKeys.push(key);
+    });
+    removedKeys.forEach(function (key) {
+      var parts = key.split(':'), e = evs(parts[0], Number(parts[1]));
+      out.push({ kind: parts[0], id: Number(parts[1]), role: (e[0] && e[0].role) || '', removed: true, events: e, children: [] });
+    });
+    return Object.assign({}, tree, { children: out, hiddenCount: hidden, events: events.filter(function (e) {
+      return e.kind === 'relation' && e.id === tree.id;
+    }) });
+  }
+
+  var api = { windowTree: windowTree, buildTree: buildTree, wayRefsOf: wayRefsOf, findPath: findPath };
   if (isNode) module.exports = api;
   else root.Filum = Object.assign(root.Filum || {}, api);
 })(typeof self !== 'undefined' ? self : this);

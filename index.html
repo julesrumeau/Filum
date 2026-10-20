@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Filum</title>
+<link rel="icon" href="data:,">
 <style>
   :root { --fond:#fafaf7; --texte:#1c1c1a; --doux:#6b6b66; --trace:#2b6cb0; --alerte:#d62828; --avert:#e08a00; --selection:#7b2cbf; --surligne:#efe3fb; --bon:#2f855a; --bord:#d9d9d2; }
   @media (prefers-color-scheme: dark) {
@@ -30,6 +31,7 @@
   .frise-pistes { position:relative; height:34px; margin:12px 0 2px; }
   #frise-fond { position:absolute; left:8px; right:8px; top:12px; height:10px; background:var(--bord); border-radius:5px; overflow:hidden; }
   #frise-fond .repere { position:absolute; top:0; width:1px; height:100%; background:var(--doux); opacity:.5; }
+  #frise-fond .hors { position:absolute; top:0; height:100%; background:var(--fond); opacity:.72; pointer-events:none; }
   #frise-fond .bande { position:absolute; top:0; height:100%; background:var(--alerte); opacity:.85; }
   #frise-fond .bande.incertaine { background:repeating-linear-gradient(45deg, var(--alerte) 0 4px, transparent 4px 8px); }
   .frise-pistes input[type=range] { position:absolute; left:0; top:0; width:100%; height:34px; margin:0; background:transparent; pointer-events:none; -webkit-appearance:none; appearance:none; }
@@ -39,6 +41,13 @@
   .frise-pistes input[type=range]::-moz-range-thumb { pointer-events:auto; width:10px; height:24px; border-radius:4px; background:var(--trace); border:2px solid var(--fond); cursor:ew-resize; }
   .frise-pistes input[type=range]:focus-visible::-webkit-slider-thumb { outline:2px solid var(--selection); }
   .frise-dates { display:flex; justify-content:space-between; font-size:.875rem; } .actions { margin:8px 0; }
+  #frise-zone { margin:4px 0 8px; } .aide { color:var(--selection); font-size:.875rem; min-height:1.2em; }
+  .evenements { margin:2px 0 4px 16px; font-size:.8125rem; } .ev { padding-left:8px; border-left:3px solid var(--bord); }
+  .ev-created { border-left-color:var(--bon); } .ev-modified { border-left-color:var(--avert); }
+  .ev-deleted, .ev-removed-from-relation { border-left-color:var(--alerte); } .ev-added-to-relation { border-left-color:var(--trace); }
+  svg .voie.created { stroke:var(--bon); } svg .voie.modified { stroke:var(--avert); } svg .voie.added-to-relation { stroke:var(--trace); }
+  svg .voie.sel { stroke:var(--selection); }
+  .charge { margin:6px 0; } .charge progress { width:140px; vertical-align:middle; }
   .note { display:block; margin:2px 0 2px 16px; padding:2px 8px; border-left:3px solid var(--avert); background:var(--surligne); font-size:.8125rem; border-radius:0 4px 4px 0; }
   .discussion blockquote { margin:4px 0 4px 8px; padding:2px 8px; border-left:3px solid var(--bord); font-size:.875rem; }
   .feuille[data-sel] { cursor:pointer; } .feuille.selection { background:var(--surligne); outline:2px solid var(--selection); border-radius:4px; }
@@ -65,6 +74,7 @@
     <button id="go" class="go">Analyser</button>
   </div>
   <div id="status" role="status"></div>
+  <div id="frise-zone"></div>
   <div class="duo">
     <div class="gauche">
       <p id="resume"></p>
@@ -79,6 +89,7 @@
 <script src="src/viewport.js"></script>
 <script src="src/forensic.js"></script>
 <script src="src/frise.js"></script>
+<script src="src/changes.js"></script>
 <script src="src/tree.js"></script>
 <script src="src/app.js"></script>
 </body>

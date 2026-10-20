@@ -50,7 +50,18 @@
     return out.sort(function (a, b) { return a - b; });
   }
 
-  var api = { toFraction: toFraction, fromFraction: fromFraction, truncateCtx: truncateCtx,
+  // Sépare les ruptures brèves (moins de minMs : le plus souvent une édition faite en plusieurs envois)
+  // des vraies ruptures. Une rupture encore en cours est toujours longue. L'ordre est conservé.
+  function splitSpans(spans, minMs) {
+    var out = { long: [], brief: [] };
+    spans.forEach(function (sp) {
+      var brief = sp.end && (ms(sp.end.date) - ms(sp.start.date)) < minMs;
+      (brief ? out.brief : out.long).push(sp);
+    });
+    return out;
+  }
+
+  var api = { splitSpans: splitSpans, toFraction: toFraction, fromFraction: fromFraction, truncateCtx: truncateCtx,
     clipSpans: clipSpans, bandsOf: bandsOf, tickFractions: tickFractions };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.Filum = Object.assign(root.Filum || {}, api);

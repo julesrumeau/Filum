@@ -30,12 +30,14 @@
   function groupByNodes(wayMembers) {
     var parent = wayMembers.map(function (_, i) { return i; });
     function find(i) { while (parent[i] !== i) { parent[i] = parent[parent[i]]; i = parent[i]; } return i; }
-    var owner = {};
+    var owner = new Map();
     wayMembers.forEach(function (wm, i) {
-      wm.way.nodes.forEach(function (n) {
-        if (owner[n] === undefined) owner[n] = i;
-        else parent[find(i)] = find(owner[n]);
-      });
+      var nodes = wm.way.nodes;
+      for (var k = 0; k < nodes.length; k++) {
+        var o = owner.get(nodes[k]);
+        if (o === undefined) owner.set(nodes[k], i);
+        else if (o !== i) parent[find(i)] = find(o);
+      }
     });
     return wayMembers.map(function (_, i) { return find(i); });
   }
@@ -92,7 +94,7 @@
     var pieces = Object.keys(byGroup).map(function (g) { return byGroup[g]; });
 
     var detached = [];
-    if (main.length) {
+    if (main.length && secondary.length) {
       var all = main.concat(secondary), allGroup = groupByNodes(all), withMain = {};
       main.forEach(function (_, k) { withMain[allGroup[k]] = true; });
       secondary.forEach(function (wm, k) {

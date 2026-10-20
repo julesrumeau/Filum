@@ -195,3 +195,80 @@ test('changesetIds : numéros uniques des débuts et fins de rupture', () => {
 test('changesetIds : aucune période, aucun numéro', () => {
   assert.deepStrictEqual(changesetIds([]), []);
 });
+
+const { wayIdsToLoad } = require('../src/forensic.js');
+
+const rvm = (version, ts, refs) => ({ type: 'relation', id: 100, version, timestamp: ts, tags: {},
+  members: refs.map(r => (typeof r === 'object' ? r : { type: 'way', ref: r, role: '' })) });
+
+test('wayIdsToLoad : d\'abord les chemins membres à la date demandée, puis ceux des autres versions', () => {
+  const ctx = { relHistory: [rvm(1, T('2020-01-01'), [1, 2]), rvm(2, T('2022-01-01'), [3, 4])], wayHistories: {} };
+  assert.deepStrictEqual(wayIdsToLoad(ctx, T('2021-01-01')), [1, 2, 3, 4]);
+  assert.deepStrictEqual(wayIdsToLoad(ctx, T('2023-01-01')), [3, 4, 1, 2]);
+});
+
+test('wayIdsToLoad : ignore les chemins dont l\'historique est déjà chargé', () => {
+  const ctx = { relHistory: [rvm(1, T('2020-01-01'), [1, 2, 3])], wayHistories: { 2: [] } };
+  assert.deepStrictEqual(wayIdsToLoad(ctx, T('2021-01-01')), [1, 3]);
+});
+
+test('wayIdsToLoad : pas de doublon, et seuls les chemins comptent', () => {
+  const ctx = { relHistory: [
+    rvm(1, T('2020-01-01'), [1, { type: 'node', ref: 77, role: 'stop' }, { type: 'relation', ref: 9, role: '' }]),
+    rvm(2, T('2021-01-01'), [1, 1, 2]),
+  ], wayHistories: {} };
+  assert.deepStrictEqual(wayIdsToLoad(ctx, T('2022-01-01')), [1, 2]);
+});
+
+test('wayIdsToLoad : avant la création de la relation, tout vient des versions connues', () => {
+  const ctx = { relHistory: [rvm(1, T('2020-01-01'), [5])], wayHistories: {} };
+  assert.deepStrictEqual(wayIdsToLoad(ctx, T('2019-01-01')), [5]);
+});
+
+test('timeline : un événement sur un chemin qui n\'est pas membre à cette date ne change pas le statut', () => {
+  const ctx = base();
+  ctx.wayHistories[99] = [wv(99, 1, T('2021-01-01'), [500, 501]), wv(99, 2, T('2021-06-01'), [600, 601])];
+  ctx.wayHistories[1].push(wv(1, 2, T('2022-03-01'), [10, 11]));
+  const tl = timeline(ctx, 100);
+  assert.deepStrictEqual(tl.map(p => p.broken), [false, false, false, true]);
+  assert.strictEqual(tl[1].date, T('2021-01-01'));
+});
+
+const { timelineAsync, spansOf } = require('../src/forensic.js');
+
+function brokenCtx() {
+  const ctx = base();
+  ctx.wayHistories[1].push(wv(1, 2, T('2022-03-01'), [10, 11], { user: 'bob' }));
+  ctx.wayHistories[1].push(wv(1, 3, T('2023-05-01'), [10, 11, 12], { user: 'alice' }));
+  ctx.wayHistories[2].push(wv(2, 2, T('2024-01-01'), [40, 41], { user: 'dave' }));
+  return ctx;
+}
+
+test('spansOf à partir de la timeline donne les mêmes périodes que findBreaks', () => {
+  const ctx = brokenCtx();
+  assert.deepStrictEqual(spansOf(timeline(ctx, 100)), findBreaks(ctx, 100));
+});
+
+test('timelineAsync donne exactement la même timeline que timeline', async () => {
+  const ctx = brokenCtx();
+  assert.deepStrictEqual(await timelineAsync(ctx, 100, { chunk: 1 }), timeline(ctx, 100));
+});
+
+test('timelineAsync signale sa progression, par tranches, jusqu\'à la fin', async () => {
+  const ctx = brokenCtx();
+  const seen = [];
+  await timelineAsync(ctx, 100, { chunk: 2, onProgress: (done, total) => seen.push([done, total]) });
+  assert.ok(seen.length >= 2);
+  assert.deepStrictEqual(seen[seen.length - 1][0], seen[seen.length - 1][1]);
+  assert.ok(seen.every((p, i) => i === 0 || p[0] > seen[i - 1][0]));
+});
+
+test('un préfixe de la timeline donne les périodes comme si la date de fin était plus tôt', () => {
+  const ctx = brokenCtx();
+  const points = timeline(ctx, 100);
+  const upTo = points.filter(p => p.date <= T('2022-06-01'));
+  const spans = spansOf(upTo);
+  assert.strictEqual(spans.length, 1);
+  assert.strictEqual(spans[0].end, null);
+  assert.deepStrictEqual(spansOf(points.filter(p => p.date <= T('2023-06-01')))[0].end.causes[0].user, 'alice');
+});

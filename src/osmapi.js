@@ -69,7 +69,10 @@
     snapshot.elements.forEach(function (e) {
       if (e.type === 'way' && wanted[e.id]) e.nodes.forEach(function (n) { want[n] = true; });
     });
-    return fetchBulk('node', Object.keys(want).map(Number), get);
+    return fetchBulk('node', Object.keys(want).map(Number), get).then(function (nodes) {
+      // Un nœud supprimé depuis est renvoyé sans coordonnées (visible: false) : inutilisable pour le tracé.
+      return nodes.filter(function (n) { return typeof n.lat === 'number' && typeof n.lon === 'number'; });
+    });
   }
 
   // Historique de la relation, et de quelques chemins seulement : ceux aux bords des trous
@@ -140,6 +143,29 @@
     return out;
   }
 
+  // Lit l'historique des chemins demandés, page par page (8 appels en parallèle), et le range dans
+  // ctx.wayHistories. opts : pageSize, onPage({done, total, failed}), shouldStop() vérifié entre deux pages.
+  // Un chemin en échec est listé dans `failed` sans bloquer les autres ; on peut reprendre plus tard.
+  async function fetchWayHistories(ids, ctx, get, opts) {
+    get = get || getJson;
+    opts = opts || {};
+    var todo = ids.filter(function (id) { return !ctx.wayHistories[id]; });
+    var size = opts.pageSize || 80, done = 0, failed = [], stopped = false;
+    for (var i = 0; i < todo.length; i += size) {
+      if (opts.shouldStop && opts.shouldStop()) { stopped = true; break; }
+      var page = todo.slice(i, i + size);
+      for (var j = 0; j < page.length; j += 8) {
+        await Promise.all(page.slice(j, j + 8).map(function (id) {
+          return get('way/' + id + '/history.json').then(function (r) { ctx.wayHistories[id] = r.elements; })
+            .catch(function () { failed.push(id); });
+        }));
+      }
+      done += page.length;
+      if (opts.onPage) opts.onPage({ done: done, total: todo.length, failed: failed.slice() });
+    }
+    return { done: done, failed: failed, stopped: stopped };
+  }
+
   // Versions de la relation, de la plus ancienne à la plus récente.
   async function fetchRelationHistory(relationId, get) {
     get = get || getJson;
@@ -147,7 +173,7 @@
     return r.elements.slice().sort(function (a, b) { return a.version - b.version; });
   }
 
-  var api = { fetchRelationHistory: fetchRelationHistory, fetchDiscussions: fetchDiscussions, fetchTree: fetchTree, fetchNodes: fetchNodes, fetchHistoryContext: fetchHistoryContext,
+  var api = { fetchWayHistories: fetchWayHistories, fetchRelationHistory: fetchRelationHistory, fetchDiscussions: fetchDiscussions, fetchTree: fetchTree, fetchNodes: fetchNodes, fetchHistoryContext: fetchHistoryContext,
     fetchChangesets: fetchChangesets, MAX_IDS: MAX_IDS };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.Filum = Object.assign(root.Filum || {}, api);

@@ -219,3 +219,70 @@ test('les variantes de langue (note:fr) et la casse (FIXME) sont reconnues', () 
   const keys = buildTree(snap, 100).children[0].notes.map(n => n.key).sort();
   assert.deepStrictEqual(keys, ['FIXME', 'note:fr']);
 });
+
+const { windowTree } = require('../src/tree.js');
+
+const ev = (kind, id, action, date, extra) => Object.assign({ kind, id, action, date, version: 1, user: 'u', changeset: 9 }, extra);
+
+function windowDemo() {
+  return buildTree({ elements: [
+    W(1, [10, 11]), W(2, [11, 12]), W(3, [30, 31]), W(4, [31, 32]),
+    R(100, [m('way', 1), m('way', 2), m('way', 3), m('way', 4), m('node', 99, 'stop')], { name: 'Route' }),
+  ] }, 100);
+}
+
+test('windowTree : les éléments sans événement dans la période sont masqués, les autres gardés', () => {
+  const t = windowTree(windowDemo(), [ev('way', 2, 'modified', '2022-01-01T00:00:00Z'), ev('way', 4, 'created', '2022-02-01T00:00:00Z')]);
+  assert.deepStrictEqual(t.children.filter(c => c.kind === 'way').map(c => c.id), [2, 4]);
+  assert.strictEqual(t.hiddenCount, 3); // chemins 1 et 3, nœud 99
+});
+
+test('windowTree : les événements d\'un élément sont rattachés à sa ligne, dans l\'ordre du temps', () => {
+  const t = windowTree(windowDemo(), [
+    ev('way', 2, 'modified', '2022-05-01T00:00:00Z'), ev('way', 2, 'added-to-relation', '2022-01-01T00:00:00Z')]);
+  const w = t.children.find(c => c.id === 2);
+  assert.deepStrictEqual(w.events.map(e => e.action), ['added-to-relation', 'modified']);
+});
+
+test('windowTree : une ligne de trou est gardée si l\'un des deux chemins est visible, sinon masquée', () => {
+  const only1 = windowTree(windowDemo(), [ev('way', 2, 'modified', '2022-01-01T00:00:00Z')]);
+  assert.ok(only1.children.some(c => c.kind === 'gap')); // le trou est entre les chemins 2 et 3
+  const none = windowTree(windowDemo(), [ev('way', 1, 'modified', '2022-01-01T00:00:00Z')]);
+  assert.ok(!none.children.some(c => c.kind === 'gap'));
+});
+
+test('windowTree : un chemin retiré de la relation apparaît comme ligne à part, une seule fois', () => {
+  const t = windowTree(windowDemo(), [
+    ev('way', 77, 'removed-from-relation', '2022-01-01T00:00:00Z'), ev('way', 77, 'deleted', '2022-02-01T00:00:00Z')]);
+  const rows = t.children.filter(c => c.id === 77);
+  assert.strictEqual(rows.length, 1);
+  assert.strictEqual(rows[0].removed, true);
+  assert.strictEqual(rows[0].events.length, 2);
+});
+
+test('windowTree : la racine garde ses propres événements, son statut et son résumé', () => {
+  const full = windowDemo();
+  const t = windowTree(full, [ev('relation', 100, 'modified', '2022-01-01T00:00:00Z', { tags: [] })]);
+  assert.strictEqual(t.events.length, 1);
+  assert.strictEqual(t.status, full.status);
+  assert.deepStrictEqual(t.summary, full.summary);
+});
+
+test('windowTree : sans aucun événement, plus rien sauf la racine, et tout est compté comme masqué', () => {
+  const t = windowTree(windowDemo(), []);
+  assert.deepStrictEqual(t.children, []);
+  assert.strictEqual(t.hiddenCount, 5);
+  assert.deepStrictEqual(t.events, []);
+});
+
+test('windowTree : un nœud membre est gardé seulement s\'il a un événement', () => {
+  const t = windowTree(windowDemo(), [ev('node', 99, 'added-to-relation', '2022-01-01T00:00:00Z')]);
+  assert.deepStrictEqual(t.children.filter(c => c.kind === 'node').map(c => c.id), [99]);
+});
+
+test('windowTree ne modifie pas l\'arbre d\'origine', () => {
+  const full = windowDemo();
+  windowTree(full, [ev('way', 2, 'modified', '2022-01-01T00:00:00Z')]);
+  assert.strictEqual(full.children.filter(c => c.kind === 'way').length, 4);
+  assert.strictEqual(full.events, undefined);
+});
