@@ -350,6 +350,36 @@
     return fr;
   }
 
+  // Bulle au survol de la frise : date, version de la relation proche, rupture en cours à cette date.
+  function setupFriseHover(fr) {
+    var pistes = $('frise-zone').querySelector('.frise-pistes'), fond = $('frise-fond');
+    var bulle = document.createElement('div');
+    bulle.className = 'frise-bulle'; bulle.hidden = true;
+    pistes.appendChild(bulle);
+    pistes.addEventListener('mousemove', function (e) {
+      var rc = fond.getBoundingClientRect();
+      var f = Math.min(1, Math.max(0, (e.clientX - rc.left) / rc.width));
+      var info = F.hoverInfo(f, fr.hist, fr.allSpans, fr.min, fr.max, 6 / rc.width);
+      var lines = ['<strong>' + fmtDate(info.date) + '</strong>'];
+      if (info.version) {
+        var v = info.version;
+        lines.push('Relation v' + v.version + ' par ' + esc(v.user) + ', ' + fmtDate(v.timestamp) + ', changeset ' + v.changeset);
+      }
+      if (info.span) {
+        var sp = info.span, who = (sp.start.causes || []).slice(0, 2).map(function (c) {
+          return (c.type === 'relation' ? 'la relation' : 'chemin ' + c.id) + ' v' + c.version + ' par ' + esc(c.user);
+        }).join(', ');
+        lines.push('<span class="rupture">Relation cassée ' + (sp.fromCreation ? 'dès sa création' : 'depuis le ' + fmtDate(sp.start.date))
+          + (sp.end ? ' jusqu\'au ' + fmtDate(sp.end.date) : ' (toujours cassée)') + '</span>' + (who ? '<br>Début : ' + who : ''));
+      }
+      bulle.innerHTML = lines.join('<br>');
+      bulle.hidden = false;
+      var x = e.clientX - pistes.getBoundingClientRect().left;
+      bulle.style.left = Math.max(0, Math.min(x + 12, pistes.clientWidth - bulle.offsetWidth)) + 'px';
+    });
+    pistes.addEventListener('mouseleave', function () { bulle.hidden = true; });
+  }
+
   function buildFrise() {
     var fr = state.frise;
     $('frise-zone').innerHTML = '<div class="frise-pistes"><div id="frise-fond"></div>'
@@ -369,6 +399,7 @@
       fr.to = fr.toIsMax ? fr.max : F.fromFraction(Number(d.value) / 1000, fr.min, fr.max);
       paintFrise();
     }
+    setupFriseHover(fr);
     $('cur-g').addEventListener('input', function () { onMove('g'); });
     $('cur-d').addEventListener('input', function () { onMove('d'); });
     $('charge').addEventListener('click', function (e) {

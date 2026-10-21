@@ -138,3 +138,30 @@ test('estimateLoad : au moins une seconde, jamais de NaN ni de undefined', () =>
   assert.strictEqual(r.n, 0);
   assert.ok(Number.isFinite(r.secs));
 });
+
+const { hoverInfo } = require('../src/frise.js');
+
+test('hoverInfo : la date sous le curseur, la version proche et la rupture qui la contient', () => {
+  const hist = [
+    { version: 1, timestamp: '2020-01-01T00:00:00Z', user: 'a', changeset: 1 },
+    { version: 2, timestamp: '2021-01-01T00:00:00Z', user: 'b', changeset: 2 },
+  ];
+  const spans = [{ start: { date: '2020-06-01T00:00:00Z', causes: [] }, end: { date: '2020-09-01T00:00:00Z', causes: [] } }];
+  const mid = hoverInfo(toFraction('2020-07-15T00:00:00Z', MIN, MAX), hist, spans, MIN, MAX, 0.005);
+  assert.strictEqual(mid.date.slice(0, 10), '2020-07-15');
+  assert.strictEqual(mid.version, null);
+  assert.strictEqual(mid.span, spans[0]);
+  const near = hoverInfo(toFraction('2021-01-03T00:00:00Z', MIN, MAX), hist, spans, MIN, MAX, 0.01);
+  assert.strictEqual(near.version.version, 2);
+  assert.strictEqual(near.span, null);
+});
+
+test('hoverInfo : la version la plus proche gagne, une rupture en cours va jusqu\'à la fin, pas d\'historique de ruptures', () => {
+  const hist = [
+    { version: 1, timestamp: '2020-01-01T00:00:00Z' }, { version: 2, timestamp: '2020-01-04T00:00:00Z' }];
+  const f = toFraction('2020-01-03T00:00:00Z', MIN, MAX);
+  assert.strictEqual(hoverInfo(f, hist, null, MIN, MAX, 0.01).version.version, 2);
+  assert.strictEqual(hoverInfo(f, hist, null, MIN, MAX, 0.01).span, null);
+  const open = [{ start: { date: '2021-06-01T00:00:00Z' }, end: null }];
+  assert.strictEqual(hoverInfo(0.99, [], open, MIN, MAX, 0.01).span, open[0]);
+});

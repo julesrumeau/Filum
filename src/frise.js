@@ -70,7 +70,22 @@
     return { n: n, secs: Math.max(1, Math.round(n * 0.03)), approx: approx };
   }
 
-  var api = { estimateLoad: estimateLoad, splitSpans: splitSpans, toFraction: toFraction, fromFraction: fromFraction, truncateCtx: truncateCtx,
+  // Ce qu'il y a sous le curseur de la souris à la fraction f : la date, la version de la relation la plus
+  // proche (à moins de tol de la frise), la rupture qui contient la date (une rupture en cours va jusqu'au bout).
+  function hoverInfo(f, hist, spans, minIso, maxIso, tol) {
+    var date = fromFraction(f, minIso, maxIso), best = null, bestD = tol;
+    (hist || []).forEach(function (v) {
+      var d = Math.abs(toFraction(v.timestamp, minIso, maxIso) - f);
+      if (d <= bestD) { best = v; bestD = d; }
+    });
+    var span = null;
+    (spans || []).forEach(function (sp) {
+      if (!span && sp.start.date <= date && (!sp.end || date <= sp.end.date)) span = sp;
+    });
+    return { date: date, version: best, span: span };
+  }
+
+  var api = { hoverInfo: hoverInfo, estimateLoad: estimateLoad, splitSpans: splitSpans, toFraction: toFraction, fromFraction: fromFraction, truncateCtx: truncateCtx,
     clipSpans: clipSpans, bandsOf: bandsOf, tickFractions: tickFractions };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.Filum = Object.assign(root.Filum || {}, api);
