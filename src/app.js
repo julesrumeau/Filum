@@ -267,15 +267,19 @@
       return null;
     }
     var fr = prev, max = nowIso();
+    var wayRefs = {};
+    rel.members.forEach(function (m) { if (m.type === 'way') wayRefs[m.ref] = true; });
     if (!fr) {
       zone.innerHTML = '<p class="detail">Chargement de la frise...</p>';
       var hist = await F.fetchRelationHistory(id);
       fr = { relId: id, hist: hist, min: hist[0].timestamp, max: max, from: hist[0].timestamp, to: max, toIsMax: true,
-        ctx: null, points: null, allSpans: null, applied: null, loading: false, stop: false, progress: null, failedCount: 0 };
+        ctx: null, points: null, allSpans: null, applied: null, loading: false, stop: false, progress: null, failedCount: 0,
+        totalWays: 0 };
     } else {
       fr.max = max;
       if (fr.toIsMax) fr.to = max;
     }
+    fr.totalWays = Object.keys(wayRefs).length;
     state.frise = fr;
     buildFrise();
     return fr;
@@ -377,9 +381,9 @@
       box.innerHTML = '<span class="detail">Historique complet lu.' + (fr.failedCount ? ' ' + fr.failedCount + ' chemin(s) en échec.' : '') + '</span>';
       return;
     }
-    var n = pending === null ? fr.totalWays : pending, secs = Math.max(1, Math.round(n * 0.03));
+    var est = F.estimateLoad(pending, fr.totalWays);
     box.innerHTML = '<button class="voir" data-act="charger">' + (fr.progress ? 'Reprendre' : 'Charger tout l\'historique')
-      + '</button> <span class="detail">' + (pending === null ? 'environ ' : '') + n + ' chemin(s) à lire, environ ' + secs
+      + '</button> <span class="detail">' + (est.approx ? 'environ ' : '') + est.n + ' chemin(s) à lire, environ ' + est.secs
       + ' s, par pages de 80 (8 appels en parallèle). Se lance tout seul quand vous choisissez une période.</span>';
   }
 

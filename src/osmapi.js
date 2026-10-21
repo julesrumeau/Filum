@@ -3,6 +3,9 @@
 
   var BASE = 'https://api.openstreetmap.org/api/0.6/';
   var MAX_IDS = 700; // l'API OSM accepte 725 identifiants par appel groupé
+  // Longueur maximale d'une adresse complète. L'API répond 414 (URI Too Long) au-delà d'environ 8 190 caractères
+  // (mesuré : 200 à 8 058, 414 à 8 358). Des identifiants de 11 chiffres en tiennent environ 578, pas 700.
+  var MAX_URL_CHARS = 7000;
 
   function sleep(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
 
@@ -30,9 +33,24 @@
     return out;
   }
 
+  // Découpe en lots de au plus maxCount identifiants ET dont la liste (séparée par des virgules) tient
+  // en maxChars caractères.
+  function chunksByLength(list, maxCount, maxChars) {
+    var out = [], cur = [], len = 0;
+    list.forEach(function (id) {
+      var add = String(id).length + 1;
+      if (cur.length && (cur.length >= maxCount || len + add > maxChars)) { out.push(cur); cur = []; len = 0; }
+      cur.push(id); len += add;
+    });
+    if (cur.length) out.push(cur);
+    return out;
+  }
+
   function fetchBulk(kind, ids, get) {
-    return Promise.all(chunks(ids, MAX_IDS).map(function (c) {
-      return get(kind + 's.json?' + kind + 's=' + c.join(','));
+    var prefix = kind + 's.json?' + kind + 's=';
+    var room = MAX_URL_CHARS - BASE.length - prefix.length;
+    return Promise.all(chunksByLength(ids, MAX_IDS, room).map(function (c) {
+      return get(prefix + c.join(','));
     })).then(function (parts) {
       return parts.reduce(function (all, p) { return all.concat(p.elements); }, []);
     });
@@ -174,7 +192,7 @@
   }
 
   var api = { fetchWayHistories: fetchWayHistories, fetchRelationHistory: fetchRelationHistory, fetchDiscussions: fetchDiscussions, fetchTree: fetchTree, fetchNodes: fetchNodes, fetchHistoryContext: fetchHistoryContext,
-    fetchChangesets: fetchChangesets, MAX_IDS: MAX_IDS };
+    fetchChangesets: fetchChangesets, MAX_IDS: MAX_IDS, MAX_URL_CHARS: MAX_URL_CHARS, API_BASE: BASE };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.Filum = Object.assign(root.Filum || {}, api);
 })(typeof self !== 'undefined' ? self : this);

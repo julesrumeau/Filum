@@ -61,7 +61,16 @@
     return out;
   }
 
-  var api = { splitSpans: splitSpans, toFraction: toFraction, fromFraction: fromFraction, truncateCtx: truncateCtx,
+  // Combien de chemins reste-t-il à lire, et en combien de secondes environ (environ 30 ms par chemin).
+  // pending est null tant que l'historique n'est pas chargé : on estime alors avec le nombre de chemins de la
+  // relation. Ne renvoie jamais NaN.
+  function estimateLoad(pending, totalWays) {
+    var approx = pending === null || pending === undefined;
+    var n = approx ? (Number(totalWays) || 0) : pending;
+    return { n: n, secs: Math.max(1, Math.round(n * 0.03)), approx: approx };
+  }
+
+  var api = { estimateLoad: estimateLoad, splitSpans: splitSpans, toFraction: toFraction, fromFraction: fromFraction, truncateCtx: truncateCtx,
     clipSpans: clipSpans, bandsOf: bandsOf, tickFractions: tickFractions };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.Filum = Object.assign(root.Filum || {}, api);

@@ -121,3 +121,20 @@ test('splitSpans garde l\'ordre chronologique dans chaque groupe', () => {
 test('splitSpans : aucune période, deux groupes vides', () => {
   assert.deepStrictEqual(splitSpans([], DAY), { long: [], brief: [] });
 });
+
+const { estimateLoad } = require('../src/frise.js');
+
+test('estimateLoad : avant tout chargement, on estime d\'après le nombre de chemins de la relation', () => {
+  assert.deepStrictEqual(estimateLoad(null, 1022), { n: 1022, secs: 31, approx: true });
+});
+
+test('estimateLoad : une fois le contexte chargé, on utilise le nombre exact restant', () => {
+  assert.deepStrictEqual(estimateLoad(729, 1022), { n: 729, secs: 22, approx: false });
+});
+
+test('estimateLoad : au moins une seconde, jamais de NaN ni de undefined', () => {
+  assert.strictEqual(estimateLoad(5, 1022).secs, 1);
+  const r = estimateLoad(null, undefined);
+  assert.strictEqual(r.n, 0);
+  assert.ok(Number.isFinite(r.secs));
+});

@@ -300,3 +300,49 @@ test('fetchNodes ne renvoie que les nœuds qui ont des coordonnées (les nœuds 
   const nodes = await fetchNodes(snap, [1], get);
   assert.deepStrictEqual(nodes.map(n => n.id), [100, 102]);
 });
+
+const { MAX_URL_CHARS, API_BASE } = require('../src/osmapi.js');
+
+// L'API répond 414 au-delà d'environ 8 190 caractères d'adresse (mesuré : 200 à 8 058, 414 à 8 358).
+function longIds(n) { return Array.from({ length: n }, (_, i) => 11647551030 + i); }
+
+test('les appels de nœuds restent sous la limite d\'adresse même avec des identifiants de 11 chiffres', async () => {
+  const lengths = [];
+  const get = async (path) => { lengths.push(API_BASE.length + path.length); return { elements: [] }; };
+  const ids = longIds(2000);
+  const snap = { elements: [{ type: 'way', id: 1, nodes: ids }] };
+  await fetchNodes(snap, [1], get);
+  assert.ok(lengths.length >= 2);
+  assert.ok(lengths.every(l => l <= MAX_URL_CHARS), 'adresses trop longues : ' + lengths.filter(l => l > MAX_URL_CHARS));
+});
+
+test('aucun identifiant n\'est perdu ni demandé deux fois quand on découpe par longueur', async () => {
+  const asked = [];
+  const get = async (path) => { asked.push(...path.split('=')[1].split(',').map(Number)); return { elements: [] }; };
+  const ids = longIds(2000);
+  await fetchNodes({ elements: [{ type: 'way', id: 1, nodes: ids }] }, [1], get);
+  assert.deepStrictEqual(asked.slice().sort((a, b) => a - b), ids);
+});
+
+test('les chemins et les relations aussi sont découpés par longueur d\'adresse', async () => {
+  const lengths = [];
+  const get = async (path) => { lengths.push(API_BASE.length + path.length); return { elements: [] }; };
+  const members = longIds(2000).map(ref => ({ type: 'way', ref, role: '' }));
+  const db = { relation1: { type: 'relation', id: 1, members } };
+  const api = { getJson: async (path) => {
+    if (path.startsWith('relations')) return { elements: [db.relation1] };
+    return get(path);
+  } };
+  await fetchTree(1, api.getJson);
+  assert.ok(lengths.length >= 2);
+  assert.ok(lengths.every(l => l <= MAX_URL_CHARS));
+});
+
+test('des identifiants courts restent limités à MAX_IDS par appel', async () => {
+  const counts = [];
+  const get = async (path) => { counts.push(path.split('=')[1].split(',').length); return { elements: [] }; };
+  const ids = Array.from({ length: 1500 }, (_, i) => i + 1);
+  await fetchNodes({ elements: [{ type: 'way', id: 1, nodes: ids }] }, [1], get);
+  assert.ok(counts.every(c => c <= MAX_IDS));
+  assert.strictEqual(counts.length, 3);
+});
