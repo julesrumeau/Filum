@@ -19,7 +19,13 @@
       if (g.open.length) parts.push(g.open.length + ' anneau(x) ouvert(s)');
     } else parts.push(s.isPolygon ? 'polygone' : s.pieces + ' morceau(x)');
     if (s.gaps) parts.push(s.gaps + ' trou(s)');
-    if (s.openEnds) parts.push(s.openEnds + ' bout(s) ouvert(s)');
+    if (s.openEnds) {
+      var kinds = [];
+      if (s.openFree) kinds.push(s.openFree + ' bout(s) libre(s)');
+      if (s.openMid) kinds.push(s.openMid + ' bout(s) posé(s) sur le milieu d\'un chemin (à couper)');
+      if (s.openBranch) kinds.push(s.openBranch + ' embranchement(s) (3 chemins ou plus finissent au même nœud)');
+      parts.push(kinds.length ? kinds.join(', ') : s.openEnds + ' bout(s) ouvert(s)');
+    }
     if (s.orderIssues) parts.push(s.orderIssues + ' problème(s) d\'ordre');
     if (s.detached) parts.push(s.detached + ' isolé(s)');
     if (s.missing) parts.push(s.missing + ' absent(s)');

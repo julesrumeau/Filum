@@ -402,3 +402,12 @@ test('buildTree : une relation qui n\'est pas un polygone n\'a pas d\'anneaux', 
   const t = buildTree({ elements: [W(1, [1, 2]), R(100, [m('way', 1)])] }, 100);
   assert.strictEqual(t.rings, undefined);
 });
+
+test('buildTree : le résumé d\'un polygone sépare bouts libres, raccords au milieu d\'un chemin et embranchements', () => {
+  const mp = (ref) => ({ type: 'way', ref, role: 'outer' });
+  const t = buildTree({ elements: [
+    W(1, [1, 2, 3, 4]), W(2, [4, 5, 1]), W(3, [3, 6, 7]),
+    { type: 'relation', id: 100, tags: { type: 'multipolygon' }, members: [mp(1), mp(2), mp(3)] },
+  ] }, 100);
+  assert.deepStrictEqual([t.summary.openFree, t.summary.openMid, t.summary.openBranch], [1, 1, 0]);
+});

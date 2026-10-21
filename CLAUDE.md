@@ -123,3 +123,10 @@ Ne pas récupérer l'historique de chaque élément. Prendre des instantanés da
 ## L'utilisateur
 
 Jules Rumeau. Développe Scopus en projet personnel. N'EST PAS spécialiste d'OpenStreetMap : il apprend. Expliquer simplement le vocabulaire OSM (nœud, chemin, relation, membre, rôle, version, changeset, multipolygone). Il veut comprendre le besoin réel avant de construire, ne veut pas harceler ses interlocuteurs, et veut tester lui-même sur des cas réels.
+
+
+## Polygones et trous : décisions du 21/10/2026
+
+- Bouts non raccordés d'un polygone (`openKinds`) : `free` (degré 1), `mid` (le nœud est au milieu d'un autre chemin du même rôle), `branch` (degré impair d'au moins 3). La règle du degré impair est conservée : un embranchement ou un raccord en T est un défaut selon les règles des multipolygones, pas un faux positif ; seule l'étiquette change. Échantillon de contrôle : 190 polygones aléatoires (ids 274150 à 274300, 12000000 et 16000000 à +150) et 11 relations connues, aucun bout ouvert : pas de cas réel pour valider.
+- Trous d'un itinéraire : un trou n'est gardé que s'il relie deux morceaux pas encore reliés (union-find sur les morceaux), donc `gaps.length` = morceaux - 1. Un retour vers un morceau déjà relié (A, B, A) est un problème d'ordre `touching: false`. Mesuré avant/après : 1623019 de 8 à 6 trous, 2910706 de 2 à 1, les autres inchangés.
+- Piège de travail : un `str.replace` Python qui ne trouve pas son ancre échoue en silence (le CSS de `index.html` a ainsi été perdu une fois) : toujours `assert` sur l'ancre.

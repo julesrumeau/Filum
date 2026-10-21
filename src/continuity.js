@@ -68,15 +68,21 @@
 
   // Bouts ouverts d'un ensemble de contours : un nœud où il arrive un nombre impair de bouts de chemins.
   // Un chemin qui se referme sur lui-même n'en a aucun.
+  // Bouts non raccordés d'un ensemble de chemins (même rôle) : les nœuds où arrive un nombre impair de bouts.
+  // Sorte de chaque bout : « mid » (le nœud est au milieu d'un autre chemin : raccord en T à couper), « branch »
+  // (trois bouts ou plus au même nœud : le contour se ramifie), « free » (bout libre).
   function openEndsOf(ways) {
-    var deg = {};
+    var deg = {}, inner = new Set(), kinds = {};
     ways.forEach(function (w) {
       var e = ends(w);
+      for (var k = 1; k < w.nodes.length - 1; k++) inner.add(w.nodes[k]);
       if (e[0] === e[1]) return;
       deg[e[0]] = (deg[e[0]] || 0) + 1;
       deg[e[1]] = (deg[e[1]] || 0) + 1;
     });
-    return Object.keys(deg).filter(function (n) { return deg[n] % 2 === 1; }).map(Number);
+    var nodes = Object.keys(deg).filter(function (n) { return deg[n] % 2 === 1; }).map(Number);
+    nodes.forEach(function (n) { kinds[n] = inner.has(n) ? 'mid' : deg[n] >= 3 ? 'branch' : 'free'; });
+    return { nodes: nodes, kinds: kinds };
   }
 
   function analyzePolygon(wayMembers, missing) {
@@ -87,11 +93,12 @@
     });
     var group = groupByNodes(wayMembers), byGroup = {};
     wayMembers.forEach(function (wm, k) { (byGroup[group[k]] = byGroup[group[k]] || []).push(wm.index); });
+    var o = openEndsOf(rings.outer), i = openEndsOf(rings.inner);
     return {
       isPolygon: true,
       pieces: Object.keys(byGroup).map(function (g) { return byGroup[g]; }),
       gaps: [], orderIssues: [], detached: [], missing: missing,
-      openEnds: openEndsOf(rings.outer).concat(openEndsOf(rings.inner)),
+      openEnds: o.nodes.concat(i.nodes), openKinds: Object.assign({}, i.kinds, o.kinds),
     };
   }
 
@@ -118,6 +125,15 @@
     }
 
     var gaps = [], orderIssues = [], exits = null;
+    // Un trou ne compte que s'il relie deux morceaux pas encore reliés : A, B, A fait un trou, pas deux.
+    var linked = {};
+    function root(g) { while (linked[g] !== undefined && linked[g] !== g) g = linked[g]; return g; }
+    function joinPieces(g1, g2) {
+      var r1 = root(g1), r2 = root(g2);
+      if (r1 === r2) return false;
+      linked[r1] = r2;
+      return true;
+    }
     main.forEach(function (wm, k) {
       var rb = isRoundabout(wm.way);
       var e = ends(wm.way), fresh = rb ? uniqueNodes(wm.way) : e[0] === e[1] ? [e[0]] : e.slice();
@@ -129,7 +145,8 @@
         var issue = { fromIndex: prev.index, toIndex: wm.index, fromEnds: exits.slice(), toEnds: e.slice() };
         if (group[k - 1] === group[k]) issue.touching = sharesNode(prev.way, wm.way);
         var sameGroup = group[k - 1] === group[k];
-        if (!sameGroup) gaps.push(issue);
+        if (!sameGroup && joinPieces(group[k - 1], group[k])) gaps.push(issue);
+        else if (!sameGroup && !turn) { issue.touching = false; orderIssues.push(issue); } // retour vers un morceau déjà relié par un trou
         else if (!turn) orderIssues.push(issue);
         next = fresh;
       }
@@ -137,7 +154,7 @@
     });
 
     return { isPolygon: false, pieces: pieces, gaps: gaps, orderIssues: orderIssues,
-      detached: detached, missing: missing, openEnds: [] };
+      detached: detached, missing: missing, openEnds: [], openKinds: {} };
   }
 
   function analyzeContinuity(snapshot, relationId) {

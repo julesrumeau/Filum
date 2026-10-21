@@ -354,3 +354,55 @@ test('problème d\'ordre : touching dit si les deux chemins se touchent (raccord
     way(1, [10, 11]), way(2, [30, 31]), way(3, [11, 12, 30]), rel(100, [1, 2, 3])]), 100);
   assert.strictEqual(far.orderIssues[0].touching, false);
 });
+
+// Polygones : trois sortes de bout non raccordé, pour dire ce qui ne va pas au lieu d'un « bout ouvert » unique.
+function polyRel(id, members) {
+  return { type: 'relation', id, tags: { type: 'multipolygon' }, members: members.map(([ref, role]) => ({ type: 'way', ref, role })) };
+}
+
+test('polygone : un bout libre simple est de sorte « libre »', () => {
+  const snap = snapshot([way(1, [1, 2, 3]), way(2, [3, 4, 5]), polyRel(100, [[1, 'outer'], [2, 'outer']])]);
+  const r = analyzeContinuity(snap, 100);
+  assert.deepStrictEqual(r.openEnds.slice().sort(), [1, 5]);
+  assert.deepStrictEqual([r.openKinds[1], r.openKinds[5]], ['free', 'free']);
+});
+
+test('polygone : trois chemins qui finissent au même nœud donnent un embranchement', () => {
+  const snap = snapshot([way(1, [1, 2, 9]), way(2, [9, 3, 1]), way(3, [9, 7, 8]), polyRel(100, [[1, 'outer'], [2, 'outer'], [3, 'outer']])]);
+  const r = analyzeContinuity(snap, 100);
+  assert.ok(r.openEnds.includes(9));
+  assert.strictEqual(r.openKinds[9], 'branch');
+  assert.strictEqual(r.openKinds[8], 'free');
+});
+
+test('polygone : un bout posé sur le milieu d\'un autre chemin est signalé comme tel', () => {
+  const snap = snapshot([way(1, [1, 2, 3, 4]), way(2, [4, 5, 1]), way(3, [3, 6, 7]), polyRel(100, [[1, 'outer'], [2, 'outer'], [3, 'outer']])]);
+  const r = analyzeContinuity(snap, 100);
+  assert.strictEqual(r.openKinds[3], 'mid');
+  assert.strictEqual(r.openKinds[7], 'free');
+});
+
+test('polygone fermé : aucun bout, openKinds vide', () => {
+  const snap = snapshot([way(1, [1, 2, 3]), way(2, [3, 4, 1]), polyRel(100, [[1, 'outer'], [2, 'outer']])]);
+  const r = analyzeContinuity(snap, 100);
+  assert.deepStrictEqual([r.openEnds, r.openKinds], [[], {}]);
+});
+
+test('liste qui alterne entre deux morceaux (A, B, A) : un seul trou, le retour en arrière est un problème d\'ordre', () => {
+  // A = chemins 1 et 3 (se touchent en 12), B = chemin 2 (loin d'eux)
+  const snap = snapshot([way(1, [10, 11, 12]), way(2, [50, 51, 52]), way(3, [12, 13, 14]), rel(100, [1, 2, 3])]);
+  const r = analyzeContinuity(snap, 100);
+  assert.strictEqual(r.pieces.length, 2);
+  assert.strictEqual(r.gaps.length, 1);
+  assert.deepStrictEqual([r.gaps[0].fromIndex, r.gaps[0].toIndex], [0, 1]);
+  assert.strictEqual(r.orderIssues.length, 1);
+  assert.deepStrictEqual([r.orderIssues[0].fromIndex, r.orderIssues[0].toIndex], [1, 2]);
+});
+
+test('trois morceaux visités dans l\'ordre A, B, C : deux trous, comme avant', () => {
+  const snap = snapshot([way(1, [10, 11]), way(2, [20, 21]), way(3, [30, 31]), rel(100, [1, 2, 3])]);
+  const r = analyzeContinuity(snap, 100);
+  assert.strictEqual(r.pieces.length, 3);
+  assert.strictEqual(r.gaps.length, 2);
+  assert.strictEqual(r.orderIssues.length, 0);
+});

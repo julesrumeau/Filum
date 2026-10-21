@@ -55,7 +55,8 @@ Un nœud déplacé ne casse donc rien, puisque seul compte l'identifiant. Voir �
 - **La géométrie n'est pas suivie.** Déplacer un nœud, ou en ajouter ou en retirer au milieu d'un chemin, n'est pas signalé comme un changement de forme.
 - **Positions passées approximatives.** À une date passée, un ancien chemin est dessiné avec des trous là où ses nœuds ont été supprimés depuis. Les sous-relations ne sont pas reconstituées à une date.
 - **Pas encore gérés** : schéma de transport v2, parcours de santé, ordre des arrêts de bus et nœuds membres (ils sont affichés, mais leur ordre n'est pas vérifié), analyse d'un parc qui n'est qu'un chemin fermé sans relation.
-- **Faux positifs possibles** : un nœud où trois chemins se terminent, ou un bout posé sur le milieu d'un autre chemin, peut donner un faux bout ouvert sur un polygone.
+- **Polygones** : un bout non raccordé est classé « libre », « posé sur le milieu d'un chemin (à couper) » ou « embranchement » (trois chemins ou plus finissent au même nœud). Ces deux derniers cas sont des défauts de saisie selon les règles des multipolygones, mais le contour peut être géométriquement fermé : à vérifier sur la carte. Sur environ 190 polygones tirés au hasard et 11 relations connues, aucun bout ouvert n'a été trouvé : les cas réels cassés manquent pour valider.
+- **Liste qui alterne entre deux morceaux** (A, B, A) : un seul trou est annoncé (le nombre de trous égale le nombre de morceaux moins un) ; le retour en arrière est un problème d'ordre.
 - **Aucun mode temps réel ni télécommande JOSM.**
 - Testé uniquement dans Chromium (en `file://` et en HTTP local). Pas testé sur téléphone.
 
@@ -70,7 +71,7 @@ Données © contributeurs OpenStreetMap, sous licence [ODbL](https://www.openstr
 Pas de dépendance, pas d'étape de construction : des scripts classiques, qui tiennent en `file://`.
 
 ```
-npm test        # 247 tests (node:test)
+npm test        # 254 tests (node:test)
 ```
 
 | Fichier | Rôle |

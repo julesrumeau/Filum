@@ -53,7 +53,8 @@
         kind: 'relation', id: id, role: role, name: relationLabel(rel.tags),
         status: statusOf(r), notes: notesOf(rel),
         summary: { gaps: r.gaps.length, orderIssues: r.orderIssues.length, openEnds: r.openEnds.length,
-          detached: r.detached.length, pieces: r.pieces.length, missing: r.missing.length, isPolygon: r.isPolygon },
+          detached: r.detached.length, pieces: r.pieces.length, missing: r.missing.length, isPolygon: r.isPolygon,
+          openFree: countKind(r, 'free'), openMid: countKind(r, 'mid'), openBranch: countKind(r, 'branch') },
         children: [],
       }, metaOf(rel));
       if (r.isPolygon) node.rings = ringsSummary(rel, ways);
@@ -163,6 +164,10 @@
     return Object.assign({}, tree, { children: out, hiddenCount: hidden, events: events.filter(function (e) {
       return e.kind === 'relation' && e.id === tree.id;
     }) });
+  }
+
+  function countKind(r, kind) {
+    return (r.openEnds || []).filter(function (n) { return r.openKinds && r.openKinds[n] === kind; }).length;
   }
 
   // Anneaux d'un polygone : combien d'extérieurs et d'intérieurs, combien sont fermés, lesquels sont ouverts.
