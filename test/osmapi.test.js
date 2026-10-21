@@ -419,3 +419,14 @@ test('fetchMemberNodes : charge les nœuds membres de toutes les relations, une 
   assert.strictEqual(api.calls.length, 1);
   assert.deepStrictEqual(await fetchMemberNodes({ elements: [{ type: 'relation', id: 1, members: [] }] }, api.getJson), []);
 });
+
+const { fetchNodeWays } = require('../src/osmapi.js');
+
+test('fetchNodeWays : les chemins qui passent par chaque nœud, un appel par nœud, nœuds en double ignorés', async () => {
+  const calls = [];
+  const get = async (path) => { calls.push(path); return { elements: [{ type: 'way', id: Number(path.match(/node\/(\d+)/)[1]) * 10, nodes: [1, 2], tags: {} }] }; };
+  const res = await fetchNodeWays([5, 6, 5], get);
+  assert.deepStrictEqual(calls.sort(), ['node/5/ways.json', 'node/6/ways.json']);
+  assert.deepStrictEqual(Object.keys(res).sort(), ['5', '6']);
+  assert.strictEqual(res[5][0].id, 50);
+});

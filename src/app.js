@@ -146,7 +146,9 @@
     if (n.kind === 'gap') {
       return '<span class="pastille mauvais"></span><strong>Trou</strong> : le chemin ' + osmLink('way', n.fromRef)
         + ' (bout libre : nœud ' + nodeIds(n.fromEnds) + ') ne se raccorde pas au chemin ' + osmLink('way', n.toRef)
-        + ' (nœud ' + nodeIds(n.toEnds) + ')';
+        + ' (nœud ' + nodeIds(n.toEnds) + ') <button class="voir" data-piste="1" data-from="' + n.fromEnds.join(',')
+        + '" data-to="' + n.toEnds.join(',') + '" title="Cherche les chemins qui touchent les bouts libres sans être dans la relation">Chercher une cause</button>'
+        + '<div class="pistes"></div>';
     }
     if (n.kind === 'order') {
       return '<span class="pastille ordre"></span><strong>Ordre</strong> : le chemin ' + osmLink('way', n.toRef)
@@ -215,7 +217,8 @@
       ? 'Où sont les trous : ' + sums.slice(0, 12).map(function (h) {
         var r = state.results.filter(function (x) { return x.relationId === h.relationId; })[0];
         return '<button class="voir" data-trou="' + h.relationId + '">' + esc(F.relationLabel({ name: h.name }) || 'relation') + ' #' + h.relationId
-          + ' : ' + h.count + (r && r.isPolygon ? ' bout(s) ouvert(s)' : ' trou(s)') + '</button>';
+          + ' : ' + h.count + (r && r.isPolygon ? ' bout(s) ouvert(s)' : ' trou(s)') + '</button>'
+          + (h.relationId !== state.tree.id ? '<button class="voir" data-seule="' + h.relationId + '" title="Analyser cette relation seule, avec la frise et la recherche de l\'historique">Enquêter</button>' : '');
       }).join(' ') + (sums.length > 12 ? ' et ' + (sums.length - 12) + ' autre(s)' : '')
       : '';
   }
@@ -1088,6 +1091,8 @@
 
   $('go').addEventListener('click', run);
   $('trous').addEventListener('click', function (e) {
+    var seule = e.target.closest('button[data-seule]');
+    if (seule) { $('relation').value = seule.dataset.seule; run(); return; }
     var b = e.target.closest('button[data-trou]');
     if (!b) return;
     var r = state.results.filter(function (x) { return x.relationId === Number(b.dataset.trou); })[0];
@@ -1110,7 +1115,37 @@
     run();
   })();
   $('relation').addEventListener('keydown', function (e) { if (e.key === 'Enter') run(); });
+  // Pistes de réparation d'un trou : chemins hors relation qui touchent les bouts libres (une indication, pas une preuve).
+  async function chercherPistes(b) {
+    var row = b.closest('.feuille'), out = row.querySelector('.pistes');
+    var from = b.dataset.from.split(',').map(Number), to = b.dataset.to.split(',').map(Number);
+    out.innerHTML = '<span class="detail">Recherche...</span>';
+    try {
+      var nodeWays = await F.fetchNodeWays(from.concat(to));
+      var members = {};
+      state.snapshot.elements.forEach(function (x) { if (x.type === 'way') members[x.id] = true; });
+      var cands = F.repairCandidates({ fromEnds: from, toEnds: to }, nodeWays, members);
+      if (!cands.length) {
+        out.innerHTML = '<span class="detail">Aucun chemin hors de la relation ne touche ces bouts libres : ce n\'est pas un simple oubli d\'ajout. '
+          + 'Les bouts ne sont raccordés à rien d\'autre, ou le tronçon manque dans OpenStreetMap.</span>';
+        return;
+      }
+      out.innerHTML = '<span class="detail">Pistes (une indication, pas une preuve) : chemins hors de la relation qui touchent un bout libre.</span><ul>'
+        + cands.slice(0, 6).map(function (c) {
+          var what = [c.tags.name, c.tags.highway].filter(Boolean).map(esc).join(', ');
+          return '<li>' + osmLink('way', c.id) + (what ? ' ' + what : '') + ' : '
+            + (c.bridges ? '<strong>touche les deux côtés du trou, serait le chemin manquant</strong>' : 'touche le nœud ' + c.touches.map(function (n) { return osmLink('node', n); }).join(', '))
+            + (c.changeset ? ' <span class="detail">(v' + c.version + ', ' + fmtDate(c.timestamp) + ', ' + esc(c.user) + ', changeset ' + c.changeset + ')</span>' : '')
+            + '</li>';
+        }).join('') + '</ul>' + (cands.length > 6 ? '<span class="detail">et ' + (cands.length - 6) + ' autre(s)</span>' : '');
+    } catch (e) {
+      out.innerHTML = '<span class="erreur">Échec de la recherche : ' + esc(e.message) + '</span>';
+    }
+  }
+
   $('liste').addEventListener('click', function (e) {
+    var piste = e.target.closest('button[data-piste]');
+    if (piste) { chercherPistes(piste); return; }
     if (!e.target.closest('a, button')) {
       var row = e.target.closest('[data-sel]');
       if (row) { select(row.getAttribute('data-sel'), { fromMap: false }); return; }
