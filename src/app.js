@@ -230,6 +230,26 @@
     renderMap(result);
   }
 
+  function fmtKm(km) { return (km >= 100 ? Math.round(km) : km.toFixed(1)).toString().replace('.', ',') + ' km'; }
+
+  // Taille de la relation affichée : de quoi décider de la redécouper.
+  function renderStats(relId) {
+    var box = $('stats');
+    if (state.window) { box.innerHTML = ''; return; }
+    var st = F.structureStats(state.snapshot, relId), ln = F.lengthStats(state.snapshot, relId, state.nodes);
+    var rel = state.snapshot.elements.filter(function (e) { return e.type === 'relation' && e.id === relId; })[0];
+    var members = rel ? rel.members.length : 0;
+    var rows = ['Longueur totale : ' + fmtKm(ln.totalKm) + (ln.noPosition ? ' (' + ln.noPosition + ' chemin(s) sans position, non comptés)' : '')
+        + (ln.longest ? ', plus long chemin ' + osmLink('way', ln.longest.id) + ' (' + fmtKm(ln.longest.km) + ')' : ''),
+      st.relations + ' relation(s) sur ' + st.depth + ' niveau(x), ' + st.ways + ' chemin(s), ' + st.nodes + ' nœuds'
+        + (st.maxNodesWay ? ', au plus ' + st.maxNodesWay.count + ' nœuds sur un chemin (' + osmLink('way', st.maxNodesWay.id) + ')' : ''),
+      'Relations les plus chargées : ' + st.biggest.map(function (r) {
+        return osmLink('relation', r.id) + (r.name ? ' ' + esc(r.name) : '') + ' (' + r.members + ' membres)';
+      }).join(', ')];
+    if (members > 300) rows.push('<span class="erreur">La relation a ' + members + ' membres : au-delà de quelques centaines, une relation devient difficile à éditer et à vérifier. Les bonnes pratiques OSM conseillent de la découper en sous-relations.</span>');
+    box.innerHTML = '<details><summary>Statistiques de la relation</summary><div class="stats">' + rows.join('<br>') + '</div></details>';
+  }
+
   function fmtDate(iso) { return iso.slice(0, 10); }
 
   function elementLabel(c) {
@@ -706,6 +726,7 @@
       + '<button data-z="fond" aria-label="Fond de carte OpenStreetMap" title="Fond de carte OpenStreetMap" class="fond' + (state.fondOn ? ' actif' : '') + '">&#9638;</button></div>'
       + '<div class="attrib" ' + (state.fondOn ? '' : 'hidden') + '>&copy; contributeurs <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a></div>';
     state.map = setupZoom(box, { x: 0, y: 0, w: W, h: H });
+    renderStats(result.relationId);
     if (state.selected) highlightMap(state.selected);
   }
 

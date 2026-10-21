@@ -27,6 +27,7 @@ Quelques relations pour essayer :
 - **La carte** : le tracé, sans fond de carte. Les points rouges sont les extrémités qui ne se raccordent pas. Molette pour zoomer, glisser pour se déplacer. Le bouton carré active un fond de carte OpenStreetMap (tuiles chargées depuis tile.openstreetmap.org seulement quand vous l'activez).
 - **La sélection** : un clic sur un chemin ou un trou, dans l'arbre ou sur la carte, le met en surbrillance partout.
 - **La frise** (sous la recherche) : deux curseurs, début et fin de la période. La barre rouge montre les périodes où la relation était cassée, sur toute son histoire. Après avoir déplacé les curseurs, cliquez sur « Analyser » : l'historique des chemins est lu (environ 30 secondes pour 1 000 chemins, avec une barre de progression et une pause), puis la page montre ce qui a été créé, modifié, ajouté, retiré ou supprimé dans la période, avec l'auteur, la date et le changeset. Ce qui n'a pas bougé dans la période n'apparaît pas. Une case sous la frise masque les modifications sans effet sur la continuité (tags, géométrie intérieure). Sous chaque modification, le bloc « Preuve » donne de quoi contrôler soi-même : versions avant et après (données brutes de l'API), nœuds retirés ou ajoutés, tags avant et après, membres ajoutés ou retirés. Pour tout voir, gardez la période complète.
+- **Les statistiques** (bloc replié sous le résumé) : longueur totale, nombre de relations, de chemins et de nœuds, relations les plus chargées, avertissement si la relation a plus de 300 membres.
 - **Les périodes de rupture** : pour chacune, qui a modifié quoi au moment où elle commence et où elle finit, avec le commentaire du changeset et sa discussion. Les ruptures de moins d'un jour, le plus souvent des éditions faites en plusieurs envois, sont regroupées dans un bloc replié.
 
 ### Comment Filum décide qu'il y a un trou
@@ -65,7 +66,7 @@ Données © contributeurs OpenStreetMap, sous licence [ODbL](https://www.openstr
 Pas de dépendance, pas d'étape de construction : des scripts classiques, qui tiennent en `file://`.
 
 ```
-npm test        # 209 tests (node:test)
+npm test        # 213 tests (node:test)
 ```
 
 | Fichier | Rôle |
@@ -76,6 +77,7 @@ npm test        # 209 tests (node:test)
 | `src/changes.js` | Ce qui change dans une période (créé, modifié, ajouté, retiré, supprimé) |
 | `src/tree.js` | Arbre des relations, fenêtre sur une période |
 | `src/frise.js`, `src/viewport.js`, `src/tuiles.js` | Échelle de dates, zoom, tuiles du fond de carte |
+| `src/stats.js` | Longueur, taille de la structure |
 | `src/input.js` | Saisie (numéro, adresse) et paramètres d'adresse |
 | `src/app.js`, `index.html` | Interface |
 
