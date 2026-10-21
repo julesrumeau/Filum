@@ -346,3 +346,11 @@ test('chemin fermé sans tag junction=roundabout : comportement inchangé', () =
   const res = analyzeContinuity(snap, 100);
   assert.strictEqual(res.orderIssues.length, 1);
 });
+
+test('problème d\'ordre : touching dit si les deux chemins se touchent (raccord en T) ou non', () => {
+  const t = analyzeContinuity(snapshot([way(1, [10, 11, 12]), way(2, [11, 20]), rel(100, [1, 2])]), 100);
+  assert.strictEqual(t.orderIssues[0].touching, true);
+  const far = analyzeContinuity(snapshot([
+    way(1, [10, 11]), way(2, [30, 31]), way(3, [11, 12, 30]), rel(100, [1, 2, 3])]), 100);
+  assert.strictEqual(far.orderIssues[0].touching, false);
+});

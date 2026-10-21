@@ -14,6 +14,12 @@
     return [w.nodes[0], w.nodes[w.nodes.length - 1]];
   }
 
+  // Les deux chemins ont-ils au moins un nœud en commun (même ailleurs qu'aux bouts) ?
+  function sharesNode(a, b) {
+    var set = new Set(a.nodes);
+    return b.nodes.some(function (n) { return set.has(n); });
+  }
+
   // Rond-point : chemin fermé où l'on entre et sort par n'importe lequel de ses nœuds.
   function isRoundabout(w) {
     return !!(w.tags && w.tags.junction === 'roundabout' && w.nodes.length > 1);
@@ -121,6 +127,7 @@
       var next = turn ? [] : rb ? (exits.some(function (x) { return fresh.indexOf(x) >= 0; }) ? fresh : []) : advance(exits, e[0], e[1]);
       if (turn || next.length === 0) {
         var issue = { fromIndex: prev.index, toIndex: wm.index, fromEnds: exits.slice(), toEnds: e.slice() };
+        if (group[k - 1] === group[k]) issue.touching = sharesNode(prev.way, wm.way);
         var sameGroup = group[k - 1] === group[k];
         if (!sameGroup) gaps.push(issue);
         else if (!turn) orderIssues.push(issue);

@@ -59,7 +59,7 @@
       function queue(list, kind, key) {
         list.forEach(function (g, k) {
           var row = { kind: kind, relationId: id, fromRef: rel.members[g.fromIndex].ref, toRef: rel.members[g.toIndex].ref,
-            fromEnds: g.fromEnds, toEnds: g.toEnds, children: [] };
+            fromEnds: g.fromEnds, toEnds: g.toEnds, touching: g.touching, children: [] };
           row[key] = k;
           (before[g.toIndex] = before[g.toIndex] || []).push(row);
         });

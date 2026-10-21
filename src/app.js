@@ -119,7 +119,9 @@
     }
     if (n.kind === 'order') {
       return '<span class="pastille ordre"></span><strong>Ordre</strong> : le chemin ' + osmLink('way', n.toRef)
-        + ' ne suit pas par un bout le chemin ' + osmLink('way', n.fromRef) + ' (relation reliée mais liste mal triée)';
+        + ' ne suit pas par un bout le chemin ' + osmLink('way', n.fromRef)
+        + (n.touching ? ' (raccord en T : ils se touchent ailleurs qu\'à un bout, couper un des deux chemins à cet endroit règle le problème)'
+          : ' (aucun nœud commun : la liste saute d\'un chemin à un autre, la relation reste reliée par d\'autres chemins)');
     }
     var role = n.role ? '<span class="role">' + esc(n.role) + '</span>' : '';
     if (n.kind === 'relation') {

@@ -12,7 +12,7 @@ Taille (estimation grossière) : S = moins d'une heure, M = quelques heures, L =
 - [x] [M] **Trou absent de la fenêtre sur les modifications** (21/10/2026) : cause trouvée sans reproduction exacte, `windowTree` masquait un trou dont les deux chemins n'avaient pas bougé dans la période. Les trous sont maintenant toujours gardés (état à la date de fin), les problèmes d'ordre suivent l'ancienne règle. Vérifié sur 2952375 (période étroite : 5 trous). Un chemin retiré ou supprimé a une pastille rouge dans la liste ; il reste invisible sur la carte (ses positions ne sont plus disponibles)
 - [x] [M] **Appel groupé qui échoue en entier** (21/10/2026) : sur 404, le lot est coupé en deux jusqu'à isoler l'identifiant manquant (absent du résultat, donc compté comme membre manquant). Vérifié sur l'API réelle : le message 404 correspond
 - [ ] [M] **Comprendre les écarts avec Waymarked Trails et Knooppuntnet** : sur 12432165, Knooppuntnet compte 2 segments, Filum 1 morceau et 3 problèmes d'ordre. Les outils comptent peut-être les segments dans l'ordre de la liste, Filum par connexité physique : décider d'aligner ou d'expliquer. Voir aussi le faux positif de 20245275 (3 points jaunes, 2 vrais, 1 faux) et le cas 15024156 de StC (Waymarked Trails signale encore une erreur, Knooppuntnet non, lonvia pense à un bug de Waymarked Trails ; vérifier que Filum ne montre pas de données périmées)
-  - Constats du 21/10/2026 (API réelle) : **12432165** a un seul problème d'ordre restant (membres 32 à 33, deux trottoirs 493039306 et 1545417558 sans aucun nœud commun) : c'est sans doute ce que Knooppuntnet compte comme coupure (2 segments), Filum le classe « ordre » car la relation reste reliée par ailleurs. **20245275** : le bout d'un trottoir (1301536802) est posé sur le MILIEU du suivant (1301485285) : raccord en T, relation continue pour un marcheur, mais signalée « ordre » par la règle actuelle (bouts seulement). **15024156** : 302 chemins, 1 morceau, 0 trou, 0 ordre (Filum ne voit rien, cohérent avec l'idée d'un défaut de Waymarked Trails). Rien changé dans le code : traiter le raccord en T comme valide contredit des tests existants et dépend de la décision « définition du trou »
+  - Constats du 21/10/2026 (API réelle) : **12432165** a un seul problème d'ordre restant (membres 32 à 33, deux trottoirs 493039306 et 1545417558 sans aucun nœud commun) : c'est sans doute ce que Knooppuntnet compte comme coupure (2 segments), Filum le classe « ordre » car la relation reste reliée par ailleurs. **20245275** : le bout d'un trottoir (1301536802) est posé sur le MILIEU du suivant (1301485285) : raccord en T, relation continue pour un marcheur, mais signalée « ordre » par la règle actuelle (bouts seulement). **15024156** : 302 chemins, 1 morceau, 0 trou, 0 ordre (Filum ne voit rien, cohérent avec l'idée d'un défaut de Waymarked Trails). Décision (21/10/2026) : le raccord en T reste « ordre » mais avec un message dédié (champ `touching`), voir « Décisions prises »
 
 ## P1. Lisibilité, saisie et confiance (retours demandés, rapides, très visibles)
 
@@ -70,13 +70,13 @@ Taille (estimation grossière) : S = moins d'une heure, M = quelques heures, L =
 - [ ] [M] Tester l'écran tactile, un petit écran réel et d'autres navigateurs que Chromium
 - Convention : toujours donner des liens osm.org complets et cliquables
 
-## Décisions à prendre par l'utilisateur
+## Décisions prises (21/10/2026, sur demande de l'utilisateur de ne plus lui poser ces questions)
 
-1. **Géométrie** : suivre ou non l'historique de la forme (nœud déplacé, nœud ajouté au milieu) ? Aujourd'hui on compare des identifiants, donc un nœud déplacé n'est jamais signalé. Le message d'origine le mentionne
-2. **Définition du trou** : garder la connexité physique, ou s'aligner sur Waymarked Trails et Knooppuntnet (rupture dans l'ordre de la liste) ? Liée au bug de 12432165
-3. **Chargement de l'historique** : automatique quand on choisit une période (environ 1 000 appels pour 2952375) ou avec confirmation ? Plus il y a de testeurs, plus la confirmation s'impose
-4. **Seuil des ruptures brèves** : 1 jour aujourd'hui, à régler selon les retours
-5. **Moniteur** (comparer à une référence) : à reconsidérer si les retours le demandent
+1. **Géométrie** : non pour l'instant. On compare des identifiants de nœuds ; un nœud déplacé ne casse pas le parcours, et suivre la forme coûterait l'historique de chaque nœud. À rouvrir si les retours le demandent
+2. **Définition du trou** : connexité physique = trou (rouge), conformément à la définition posée au départ par l'utilisateur (plusieurs morceaux non reliés). Une rupture dans l'ordre de la liste sans trou physique reste « ordre » (orange), avec un message qui distingue le raccord en T (les deux chemins se touchent ailleurs qu'à un bout : couper un chemin règle le problème) du saut dans la liste (aucun nœud commun). Un raccord en T n'est PAS un trou : continu pour un marcheur, mais la bonne pratique OSM est de couper le chemin
+3. **Chargement de l'historique** : automatique, avec estimation, barre de progression et pause (déjà en place). Une confirmation est à ajouter seulement si des abus apparaissent
+4. **Seuil des ruptures brèves** : 1 jour, à régler selon les retours
+5. **Moniteur** (comparer à une référence) : non, hors périmètre tant qu'aucun retour ne le demande
 
 ## Plus tard, hors périmètre actuel
 

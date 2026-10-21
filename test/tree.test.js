@@ -295,3 +295,8 @@ test('windowTree ne modifie pas l\'arbre d\'origine', () => {
   assert.strictEqual(full.children.filter(c => c.kind === 'way').length, 4);
   assert.strictEqual(full.events, undefined);
 });
+
+test('la ligne d\'ordre garde touching (raccord en T ou saut dans la liste)', () => {
+  const t = buildTree({ elements: [W(1, [10, 11, 12]), W(2, [11, 20]), R(100, [m('way', 1), m('way', 2)])] }, 100);
+  assert.strictEqual(t.children.find(c => c.kind === 'order').touching, true);
+});
