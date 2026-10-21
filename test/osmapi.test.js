@@ -430,3 +430,16 @@ test('fetchNodeWays : les chemins qui passent par chaque nœud, un appel par nœ
   assert.deepStrictEqual(Object.keys(res).sort(), ['5', '6']);
   assert.strictEqual(res[5][0].id, 50);
 });
+
+const { fetchMap } = require('../src/osmapi.js');
+
+test('fetchMap : une requête par case, résultats fusionnés sans doublon, bornes avec 6 décimales', async () => {
+  const calls = [];
+  const get = async (path) => {
+    calls.push(path);
+    return { elements: [{ type: 'node', id: 1, lon: 1, lat: 1 }, { type: 'node', id: calls.length + 10, lon: 2, lat: 2 }] };
+  };
+  const els = await fetchMap([[7, 48, 7.1, 48.1], [7.1, 48, 7.2, 48.1]], get);
+  assert.deepStrictEqual(calls, ['map.json?bbox=7.000000,48.000000,7.100000,48.100000', 'map.json?bbox=7.100000,48.000000,7.200000,48.100000']);
+  assert.deepStrictEqual(els.map(e => e.id).sort((a, b) => a - b), [1, 11, 12]);
+});

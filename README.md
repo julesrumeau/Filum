@@ -28,6 +28,7 @@ Quelques relations pour essayer :
 - **Les nœuds membres** (arrêts de bus, bornes, balises) : lignes dans l'arbre avec nom et type, carrés ocre sur la carte, bouton losange pour les masquer.
 - **Où sont les trous** : pour une relation parente, une ligne de boutons liste les sous-relations qui ont un trou ; un clic sélectionne le trou. Sur la carte, les chemins d'une relation coupée sont colorés par morceau.
 - **Chercher une cause** (bouton sur chaque trou) : liste les chemins qui ne sont pas dans la relation mais touchent un bout libre du trou, avec leur auteur et leur date. Un chemin qui touche les deux côtés est probablement le morceau oublié (par exemple après qu'un chemin a été coupé en deux). C'est une piste à vérifier, pas une preuve.
+- **Le contenu d'un polygone** (parc, bâtiment...) : un bouton sous les statistiques cherche ce qui se trouve dedans (arbres, bancs, aires de jeux...), par type, et le dessine sur la carte. État actuel seulement, petite zone seulement (l'API d'OpenStreetMap refuse les grandes).
 - **La sélection** : un clic sur un chemin ou un trou, dans l'arbre ou sur la carte, le met en surbrillance partout.
 - **La frise** (sous la recherche) : deux curseurs, début et fin de la période. La barre rouge montre les périodes où la relation était cassée, sur toute son histoire. Après avoir déplacé les curseurs, cliquez sur « Analyser » : l'historique des chemins est lu (environ 30 secondes pour 1 000 chemins, avec une barre de progression et une pause), puis la page montre ce qui a été créé, modifié, ajouté, retiré ou supprimé dans la période, avec l'auteur, la date et le changeset. Ce qui n'a pas bougé dans la période n'apparaît pas. Une case sous la frise masque les modifications sans effet sur la continuité (tags, géométrie intérieure). Sous chaque modification, le bloc « Preuve » donne de quoi contrôler soi-même : versions avant et après (données brutes de l'API), nœuds retirés ou ajoutés, tags avant et après, membres ajoutés ou retirés. Pour tout voir, gardez la période complète.
 - **Les statistiques** (bloc replié sous le résumé) : longueur totale, nombre de relations, de chemins et de nœuds, relations les plus chargées, avertissement si la relation a plus de 300 membres.
@@ -69,7 +70,7 @@ Données © contributeurs OpenStreetMap, sous licence [ODbL](https://www.openstr
 Pas de dépendance, pas d'étape de construction : des scripts classiques, qui tiennent en `file://`.
 
 ```
-npm test        # 240 tests (node:test)
+npm test        # 247 tests (node:test)
 ```
 
 | Fichier | Rôle |
@@ -80,7 +81,7 @@ npm test        # 240 tests (node:test)
 | `src/changes.js` | Ce qui change dans une période (créé, modifié, ajouté, retiré, supprimé) |
 | `src/tree.js` | Arbre des relations, fenêtre sur une période |
 | `src/frise.js`, `src/viewport.js`, `src/tuiles.js` | Échelle de dates, zoom, tuiles du fond de carte |
-| `src/rings.js`, `src/repair.js` | Anneaux des polygones, pistes de réparation d'un trou |
+| `src/rings.js`, `src/repair.js`, `src/contenu.js` | Anneaux des polygones, pistes de réparation d'un trou, contenu d'un polygone |
 | `src/stats.js` | Longueur, taille de la structure |
 | `src/input.js` | Saisie (numéro, adresse) et paramètres d'adresse |
 | `src/ui-*.js`, `src/app.js`, `src/html.js`, `index.html` | Interface (arbre, carte, sélection, frise), échappement du texte venu d'OSM |

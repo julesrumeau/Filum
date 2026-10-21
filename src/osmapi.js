@@ -237,6 +237,23 @@
     return out;
   }
 
+  // Tout ce qui se trouve dans des boîtes [ouest, sud, est, nord] (état actuel), une requête par boîte, sans doublon.
+  // L'API refuse les zones trop grandes ou trop chargées : l'erreur est propagée.
+  async function fetchMap(boxes, get) {
+    get = get || getJson;
+    var parts = await Promise.all(boxes.map(function (b) {
+      return get('map.json?bbox=' + b.map(function (v) { return v.toFixed(6); }).join(','));
+    }));
+    var seen = {}, out = [];
+    parts.forEach(function (p) {
+      p.elements.forEach(function (e) {
+        var key = e.type + e.id;
+        if (!seen[key]) { seen[key] = true; out.push(e); }
+      });
+    });
+    return out;
+  }
+
   // Un chemin seul (null s'il n'existe pas ou n'est pas visible).
   async function fetchWay(id, get) {
     get = get || getJson;
@@ -249,7 +266,7 @@
     }
   }
 
-  var api = { fetchNodeWays: fetchNodeWays, fetchMemberNodes: fetchMemberNodes, fetchWay: fetchWay, fetchParents: fetchParents, fetchWayHistories: fetchWayHistories, fetchRelationHistory: fetchRelationHistory, fetchDiscussions: fetchDiscussions, fetchTree: fetchTree, fetchNodes: fetchNodes, fetchHistoryContext: fetchHistoryContext,
+  var api = { fetchMap: fetchMap, fetchNodeWays: fetchNodeWays, fetchMemberNodes: fetchMemberNodes, fetchWay: fetchWay, fetchParents: fetchParents, fetchWayHistories: fetchWayHistories, fetchRelationHistory: fetchRelationHistory, fetchDiscussions: fetchDiscussions, fetchTree: fetchTree, fetchNodes: fetchNodes, fetchHistoryContext: fetchHistoryContext,
     fetchChangesets: fetchChangesets, MAX_IDS: MAX_IDS, MAX_URL_CHARS: MAX_URL_CHARS, API_BASE: BASE };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.Filum = Object.assign(root.Filum || {}, api);

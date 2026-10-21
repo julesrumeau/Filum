@@ -85,6 +85,9 @@
 
   $('go').addEventListener('click', run);
 
+  $('stats').addEventListener('click', function (e) {
+    if (e.target.closest('#btn-contenu')) U.chercherContenu();
+  });
   $('trous').addEventListener('click', function (e) {
     var seule = e.target.closest('button[data-seule]');
     if (seule) { $('relation').value = seule.dataset.seule; run(); return; }

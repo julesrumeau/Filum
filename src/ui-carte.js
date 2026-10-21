@@ -41,6 +41,11 @@
       }).join(', ')];
     if (members > 300) rows.push('<span class="erreur">La relation a ' + members + ' membres : au-delà de quelques centaines, une relation devient difficile à éditer et à vérifier. Les bonnes pratiques OSM conseillent de la découper en sous-relations.</span>');
     box.innerHTML = '<details><summary>Statistiques de la relation</summary><div class="stats">' + rows.join('<br>') + '</div></details>';
+    var res = state.results.filter(function (r) { return r.relationId === relId; })[0];
+    if (res && res.isPolygon) {
+      box.innerHTML += '<p><button class="voir" id="btn-contenu">Chercher le contenu du polygone</button> '
+        + '<span class="detail">arbres, bancs, aires de jeux... (état actuel, petite zone seulement)</span></p><div id="contenu-res"></div>';
+    }
   }
 
   // Identifiants de la relation et de toutes ses sous-relations.
@@ -210,7 +215,7 @@
       svg.setAttribute('viewBox', view.x + ' ' + view.y + ' ' + view.w + ' ' + view.h);
       var r = 6 * view.w / box.clientWidth;
       Array.prototype.forEach.call(svg.querySelectorAll('circle'), function (c) {
-        c.setAttribute('r', r);
+        c.setAttribute('r', c.classList.contains('contenu') ? r / 2.4 : r);
       });
       var half = 5 * view.w / box.clientWidth;
       Array.prototype.forEach.call(svg.querySelectorAll('rect.noeud-membre'), function (q) {

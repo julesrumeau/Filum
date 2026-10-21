@@ -6,7 +6,6 @@ Taille (estimation grossière) : S = moins d'une heure, M = quelques heures, L =
 
 ## À faire
 
-- [ ] [M] **Contenu d'un polygone** (arbres, bancs, aire de jeux dans un parc) : `/map?bbox=` puis test « point dans polygone » en local. Mesuré sur l'Orangerie (274225) : 1,6 s, 3 176 arbres. L'API refuse les grandes zones (environ 0,25 degré carré), état actuel seulement. Demandé par l'utilisateur pour les parcs
 - [ ] [M] **Fenêtre sur les modifications, suite** : résumé par changeset (qui a changé quoi, en un lot), sous-relations et nœuds membres modifiés
 - [ ] [M] **Faux positifs des polygones** : un nœud où 3 chemins se terminent, un bout posé sur le milieu d'un autre chemin donnent un faux bout ouvert
 - [ ] [M] **Liste qui alterne entre deux morceaux** (A, B, A) : plusieurs trous annoncés pour un seul
@@ -39,6 +38,7 @@ Taille (estimation grossière) : S = moins d'une heure, M = quelques heures, L =
 - Détection : connexité, ordre, carrefours, rôles, ronds-points, polygones fermés, anneaux (extérieurs, intérieurs, ouverts), appels groupés tolérants aux identifiants inexistants et aux adresses trop longues
 - Interface : arbre dépliable avec chemins sans problème repliés, carte avec zoom, sélection dans les deux sens, trait pointillé des trous, tracé coloré par morceau, fond de carte OSM, nœuds membres, statistiques
 - Forensic : périodes de rupture, frise à deux curseurs avec bulle, fenêtre sur les modifications, preuve avant/après, masquage des modifications sans effet, auteur, date, changeset et discussion, « Chercher une cause » (contrôlé sur 2952375)
+- Contenu d'un polygone (21/10/2026, `contenu.js`, `ui-contenu.js`) : bouton sous les statistiques d'un polygone, éléments étiquetés regroupés par type (Orangerie 274225 : 3 176 arbres, 177 bancs, 5 aires de jeux, identique à la mesure du 18/10), points dessinés sur la carte ; zone limitée à 6 requêtes de 0,25 degré carré, Paris refusé par l'API (plus de 50 000 éléments), état actuel seulement
 - Saisie : numéro, adresse openstreetmap.org, `r123`, chemin (`way 123`), relations parentes, paramètres dans l'adresse
 - Hygiène : `app.js` découpé en fichiers `ui-*`, échappement du texte OSM (`html.js`), code mort retiré, `test/hygiene.test.js`, 240 tests
 - Publication : site en ligne sur GitHub Pages, testé dans Chromium (le tactile et les autres navigateurs ne sont pas testés)

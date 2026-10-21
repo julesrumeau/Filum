@@ -21,6 +21,11 @@
   #status.erreur, .erreur { color:var(--alerte); } #status { min-height:1.5em; margin:8px 0; }
   #liste { margin:8px 0; max-height:calc(100vh - 380px); min-height:160px; overflow:auto; border:1px solid var(--bord); border-radius:6px; padding:4px 8px; }
   #liste details { margin-left:0; } #liste details.plie { margin:2px 0; } #liste details.plie > summary { cursor:pointer; } #liste .enfants { margin-left:18px; border-left:1px solid var(--bord); padding-left:8px; }
+  details.preuve { margin:2px 0 4px 12px; font-size:12px; } details.preuve > summary { cursor:pointer; color:var(--doux); }
+  details.preuve > div { padding:4px 0 2px 10px; border-left:2px solid var(--bord); line-height:1.6; }
+  #stats .stats { padding:4px 0 4px 10px; border-left:2px solid var(--bord); line-height:1.6; } #stats summary { cursor:pointer; }
+  .pistes { margin:2px 0 4px 16px; font-size:13px; } .pistes ul { margin:2px 0; padding-left:18px; }
+  circle.contenu { fill:#2f855a; fill-opacity:.8; stroke:none; } #contenu-res .groupes { margin-top:4px; }
   #liste summary { cursor:pointer; padding:3px 0; } .feuille { padding:2px 0 2px 14px; font-size:.9rem; }
   .detail { color:var(--doux); font-size:.8125rem; } .role { background:var(--bord); border-radius:4px; padding:0 6px; margin-left:6px; font-size:.75rem; }
   .pastille { display:inline-block; width:10px; height:10px; border-radius:50%; margin-right:6px; background:var(--bord); }
@@ -103,6 +108,7 @@
 <script src="src/tuiles.js"></script>
 <script src="src/stats.js"></script>
 <script src="src/repair.js"></script>
+<script src="src/contenu.js"></script>
 <script src="src/forensic.js"></script>
 <script src="src/frise.js"></script>
 <script src="src/changes.js"></script>
@@ -113,6 +119,7 @@
 <script src="src/ui-carte.js"></script>
 <script src="src/ui-selection.js"></script>
 <script src="src/ui-enquete.js"></script>
+<script src="src/ui-contenu.js"></script>
 <script src="src/app.js"></script>
 </body>
 </html>
