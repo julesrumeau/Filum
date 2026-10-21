@@ -649,15 +649,17 @@
     var maxLat = Math.max.apply(null, pts.map(function (p) { return p.lat; }));
     var minLon = Math.min.apply(null, pts.map(function (p) { return p.lon; }));
     var maxLon = Math.max.apply(null, pts.map(function (p) { return p.lon; }));
-    var k = Math.cos(((minLat + maxLat) / 2) * Math.PI / 180);
+    // Projection Web Mercator (x = longitude, y = ordonnée Mercator) : le tracé s'aligne sur les tuiles OSM.
+    var minV = F.mercV(minLat), maxV = F.mercV(maxLat);
     var box = $('carte'), pad = 14;
     var W = Math.max(box.clientWidth, 300), H = Math.max(box.clientHeight, 300);
-    var spanX = Math.max((maxLon - minLon) * k, 1e-9), spanY = Math.max(maxLat - minLat, 1e-9);
+    var spanX = Math.max(maxLon - minLon, 1e-9), spanY = Math.max(maxV - minV, 1e-9);
     var scale = Math.min((W - 2 * pad) / spanX, (H - 2 * pad) / spanY);
     var offX = (W - spanX * scale) / 2, offY = (H - spanY * scale) / 2;
-    function X(p) { return ((p.lon - minLon) * k * scale + offX).toFixed(1); }
-    function Y(p) { return ((maxLat - p.lat) * scale + offY).toFixed(1); }
-    var svg = '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="Tracé de la relation">';
+    state.proj = { minU: minLon, maxV: maxV, scale: scale, offX: offX, offY: offY };
+    function X(p) { return ((p.lon - minLon) * scale + offX).toFixed(1); }
+    function Y(p) { return ((maxV - F.mercV(p.lat)) * scale + offY).toFixed(1); }
+    var svg = '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="Tracé de la relation"><g id="tuiles"></g>';
     // Chaque chemin est dessiné deux fois : un trait épais invisible pour le clic, un trait fin visible.
     lines.forEach(function (l) {
       var pts2 = l.pts.map(function (q) { return X(q) + ',' + Y(q); }).join(' ');
@@ -700,13 +702,41 @@
     box.innerHTML = svg + '</svg>'
       + '<div class="zoom"><button data-z="in" aria-label="Zoom avant">+</button>'
       + '<button data-z="out" aria-label="Zoom arrière">&minus;</button>'
-      + '<button data-z="reset" aria-label="Vue complète">&#8962;</button></div>';
+      + '<button data-z="reset" aria-label="Vue complète">&#8962;</button>'
+      + '<button data-z="fond" aria-label="Fond de carte OpenStreetMap" title="Fond de carte OpenStreetMap" class="fond' + (state.fondOn ? ' actif' : '') + '">&#9638;</button></div>'
+      + '<div class="attrib" ' + (state.fondOn ? '' : 'hidden') + '>&copy; contributeurs <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a></div>';
     state.map = setupZoom(box, { x: 0, y: 0, w: W, h: H });
     if (state.selected) highlightMap(state.selected);
   }
 
   // Zoom à la molette ou aux boutons, déplacement en glissant. Le dessin garde des traits et
   // des pastilles de taille constante à l'écran.
+  // Fond de carte : tuiles OpenStreetMap du zoom adapté à la vue, ajoutées et retirées au fil du déplacement.
+  function drawTiles(svg, view, box) {
+    var g = svg.querySelector('#tuiles'), p = state.proj;
+    if (!g || !p) return;
+    var u0 = (view.x - p.offX) / p.scale + p.minU, u1 = (view.x + view.w - p.offX) / p.scale + p.minU;
+    var v1 = p.maxV - (view.y - p.offY) / p.scale, v0 = p.maxV - (view.y + view.h - p.offY) / p.scale;
+    var z = F.chooseZoom(view.w / box.clientWidth / p.scale);
+    var tiles = F.tilesFor(u0, u1, v0, v1, z, 40), want = {};
+    tiles.forEach(function (t) { want[t.z + '/' + t.x + '/' + t.y] = t; });
+    Array.prototype.forEach.call(g.querySelectorAll('image'), function (im) {
+      if (want[im.getAttribute('data-t')]) delete want[im.getAttribute('data-t')];
+      else g.removeChild(im);
+    });
+    Object.keys(want).forEach(function (key) {
+      var t = want[key], im = document.createElementNS('http://www.w3.org/2000/svg', 'image');
+      im.setAttribute('data-t', key);
+      im.setAttribute('href', 'https://tile.openstreetmap.org/' + key + '.png');
+      im.setAttribute('x', (t.u0 - p.minU) * p.scale + p.offX - 0.3);
+      im.setAttribute('y', (p.maxV - t.v0) * p.scale + p.offY - 0.3);
+      im.setAttribute('width', (t.u1 - t.u0) * p.scale + 0.6);
+      im.setAttribute('height', (t.v0 - t.v1) * p.scale + 0.6);
+      im.setAttribute('preserveAspectRatio', 'none');
+      g.appendChild(im);
+    });
+  }
+
   function setupZoom(box, full) {
     var svg = box.querySelector('svg'), view = full, drag = null, moved = 0;
     function apply() {
@@ -715,6 +745,7 @@
       Array.prototype.forEach.call(svg.querySelectorAll('circle'), function (c) {
         c.setAttribute('r', r);
       });
+      if (state.fondOn) drawTiles(svg, view, box);
     }
     function toDrawing(clientX, clientY) {
       var rc = svg.getBoundingClientRect();
@@ -758,7 +789,13 @@
     box.querySelector('.zoom').addEventListener('click', function (e) {
       var b = e.target.closest('button');
       if (!b) return;
-      if (b.dataset.z === 'reset') { view = full; apply(); }
+      if (b.dataset.z === 'fond') {
+        state.fondOn = !state.fondOn;
+        b.classList.toggle('actif', state.fondOn);
+        box.querySelector('.attrib').hidden = !state.fondOn;
+        if (state.fondOn) drawTiles(svg, view, box); else $('tuiles').innerHTML = '';
+      }
+      else if (b.dataset.z === 'reset') { view = full; apply(); }
       else zoom(b.dataset.z === 'in' ? 1.6 : 1 / 1.6);
     });
     apply();
