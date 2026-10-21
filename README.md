@@ -25,6 +25,7 @@ Quelques relations pour essayer :
 
 - **L'arbre** : la relation, ses sous-relations, ses chemins, avec pour chacun la version, l'auteur et la date. Les suites de chemins sans problème sont repliées (« 40 chemin(s) sans problème »), seuls les trous et leurs abords restent visibles. Les trous (rouge) et les problèmes d'ordre (orange) sont des lignes à leur place exacte dans la liste.
 - **La carte** : le tracé, sans fond de carte. Les points rouges sont les extrémités qui ne se raccordent pas. Molette pour zoomer, glisser pour se déplacer. Le bouton carré active un fond de carte OpenStreetMap (tuiles chargées depuis tile.openstreetmap.org seulement quand vous l'activez).
+- **Les nœuds membres** (arrêts de bus, bornes, balises) : lignes dans l'arbre avec nom et type, carrés ocre sur la carte, bouton losange pour les masquer.
 - **La sélection** : un clic sur un chemin ou un trou, dans l'arbre ou sur la carte, le met en surbrillance partout.
 - **La frise** (sous la recherche) : deux curseurs, début et fin de la période. La barre rouge montre les périodes où la relation était cassée, sur toute son histoire. Après avoir déplacé les curseurs, cliquez sur « Analyser » : l'historique des chemins est lu (environ 30 secondes pour 1 000 chemins, avec une barre de progression et une pause), puis la page montre ce qui a été créé, modifié, ajouté, retiré ou supprimé dans la période, avec l'auteur, la date et le changeset. Ce qui n'a pas bougé dans la période n'apparaît pas. Une case sous la frise masque les modifications sans effet sur la continuité (tags, géométrie intérieure). Sous chaque modification, le bloc « Preuve » donne de quoi contrôler soi-même : versions avant et après (données brutes de l'API), nœuds retirés ou ajoutés, tags avant et après, membres ajoutés ou retirés. Pour tout voir, gardez la période complète.
 - **Les statistiques** (bloc replié sous le résumé) : longueur totale, nombre de relations, de chemins et de nœuds, relations les plus chargées, avertissement si la relation a plus de 300 membres.
@@ -50,7 +51,7 @@ Un nœud déplacé ne casse donc rien, puisque seul compte l'identifiant. Voir �
 - **La frise ne marche que pour une relation qui contient directement des chemins**, pas pour une relation parente comme EuroVelo (saisissez le numéro d'une de ses sous-relations).
 - **La géométrie n'est pas suivie.** Déplacer un nœud, ou en ajouter ou en retirer au milieu d'un chemin, n'est pas signalé comme un changement de forme.
 - **Positions passées approximatives.** À une date passée, un ancien chemin est dessiné avec des trous là où ses nœuds ont été supprimés depuis. Les sous-relations ne sont pas reconstituées à une date.
-- **Pas encore gérés** : arrêts de bus et ordre des arrêts, schéma de transport v2, parcours de santé, nœuds membres (ils sont affichés mais pas analysés), analyse d'un parc qui n'est qu'un chemin fermé sans relation.
+- **Pas encore gérés** : schéma de transport v2, parcours de santé, ordre des arrêts de bus et nœuds membres (ils sont affichés, mais leur ordre n'est pas vérifié), analyse d'un parc qui n'est qu'un chemin fermé sans relation.
 - **Faux positifs possibles** : un nœud où trois chemins se terminent, ou un bout posé sur le milieu d'un autre chemin, peut donner un faux bout ouvert sur un polygone.
 - **Aucun mode temps réel ni télécommande JOSM.**
 - Testé uniquement dans Chromium (en `file://` et en HTTP local). Pas testé sur téléphone.
@@ -66,7 +67,7 @@ Données © contributeurs OpenStreetMap, sous licence [ODbL](https://www.openstr
 Pas de dépendance, pas d'étape de construction : des scripts classiques, qui tiennent en `file://`.
 
 ```
-npm test        # 213 tests (node:test)
+npm test        # 216 tests (node:test)
 ```
 
 | Fichier | Rôle |

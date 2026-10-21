@@ -26,10 +26,11 @@
   // L'arbre « qui contient quoi » : la relation, ses membres dans l'ordre (sous-relations, chemins, nœuds),
   // chaque sous-relation avec ses propres membres. Les nœuds des chemins ne sont pas dans l'arbre (non chargés).
   function buildTree(snapshot, rootId) {
-    var rels = {}, ways = {};
+    var rels = {}, ways = {}, memberNodes = {};
     snapshot.elements.forEach(function (e) {
       if (e.type === 'relation') rels[e.id] = e;
       else if (e.type === 'way') ways[e.id] = e;
+      else if (e.type === 'node') memberNodes[e.id] = e;
     });
     if (!rels[rootId]) throw new Error('relation ' + rootId + ' absente de l\'instantané');
 
@@ -81,7 +82,7 @@
             border: !!borders[id][m.ref], notes: notesOf(w), children: [],
           }, metaOf(w)));
         } else {
-          node.children.push({ kind: 'node', id: m.ref, role: m.role || '', children: [] });
+          node.children.push(nodeRow(m, memberNodes[m.ref]));
         }
       });
       return node;
@@ -160,6 +161,16 @@
     return Object.assign({}, tree, { children: out, hiddenCount: hidden, events: events.filter(function (e) {
       return e.kind === 'relation' && e.id === tree.id;
     }) });
+  }
+
+  // Tags qui disent ce qu'est un nœud membre (arrêt, borne, point de passage...), du plus précis au plus général.
+  var WHAT_KEYS = ['public_transport', 'highway', 'railway', 'information', 'tourism', 'amenity', 'natural', 'historic', 'man_made', 'barrier', 'place'];
+
+  function nodeRow(m, n) {
+    var t = (n && n.tags) || {}, what = null;
+    WHAT_KEYS.some(function (k) { if (t[k]) { what = k + '=' + t[k]; return true; } return false; });
+    return { kind: 'node', id: m.ref, role: m.role || '', loaded: !!n, name: t.name || null, ref: t.ref || null, what: what,
+      lat: n ? n.lat : undefined, lon: n ? n.lon : undefined, children: [] };
   }
 
   // Libellé d'une relation : name (avec ref entre parenthèses), sinon départ → étapes → arrivée, sinon ref.

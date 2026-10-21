@@ -43,6 +43,7 @@
   // Clé d'une ligne ou d'un élément de la carte sélectionnable : chemin, trou ou problème d'ordre.
   function selKey(n) {
     if (n.kind === 'way' && !n.missing) return 'way:' + n.id;
+    if (n.kind === 'node' && n.loaded) return 'node:' + n.id;
     if (n.kind === 'gap') return 'gap:' + n.relationId + ':' + n.gapIndex;
     if (n.kind === 'order') return 'order:' + n.relationId + ':' + n.orderIndex;
     return null;
@@ -168,7 +169,9 @@
         + ' <span class="detail">' + n.nodeCount + ' nœuds (' + n.ends[0] + ' à ' + n.ends[1] + ') · ' + metaText(n)
         + (n.border ? ' · bord d\'un trou' : '') + '</span>' + notesHtml(n);
     }
-    return '<span class="pastille vide"></span>nœud ' + osmLink('node', n.id) + role;
+    var label = [n.name, n.ref && '(' + n.ref + ')'].filter(Boolean).map(esc).join(' ');
+    return '<span class="pastille noeud"></span>nœud ' + osmLink('node', n.id) + (label ? ' ' + label : '') + role
+      + (n.what ? ' <span class="detail">' + esc(n.what) + '</span>' : (n.loaded ? '' : ' <span class="detail">(non chargé)</span>'));
   }
 
   function nodeHtml(n, open) {
@@ -655,6 +658,21 @@
     return out;
   }
 
+  // Nœuds membres chargés de la relation affichée et de ses sous-relations.
+  function memberNodeRows(relId) {
+    var inside = subtreeIds(relId), seen = {}, out = [];
+    state.snapshot.elements.forEach(function (e) {
+      if (e.type !== 'relation' || !inside[e.id]) return;
+      e.members.forEach(function (mb) {
+        if (mb.type !== 'node' || seen[mb.ref]) return;
+        seen[mb.ref] = true;
+        var n = state.snapshot.elements.filter(function (x) { return x.type === 'node' && x.id === mb.ref; })[0];
+        if (n) out.push(n);
+      });
+    });
+    return out;
+  }
+
   function renderMap(result) {
     var nodes = state.nodes, ways = {};
     state.snapshot.elements.forEach(function (e) { if (e.type === 'way') ways[e.id] = e; });
@@ -713,6 +731,10 @@
         });
       });
     }
+    var nodeRows = state.window ? [] : memberNodeRows(result.relationId);
+    nodeRows.forEach(function (n) {
+      svg += '<rect class="noeud-membre" data-sel="node:' + n.id + '" data-cx="' + X(n) + '" data-cy="' + Y(n) + '"/>';
+    });
     var inside = subtreeIds(result.relationId);
     state.results.filter(function (r) { return inside[r.relationId]; }).forEach(function (r) {
       dots(r.orderIssues, 'var(--avert)', 'order', r.relationId);
@@ -723,8 +745,10 @@
       + '<div class="zoom"><button data-z="in" aria-label="Zoom avant">+</button>'
       + '<button data-z="out" aria-label="Zoom arrière">&minus;</button>'
       + '<button data-z="reset" aria-label="Vue complète">&#8962;</button>'
+      + (nodeRows.length ? '<button data-z="noeuds" aria-label="Nœuds membres" title="Nœuds membres (arrêts, bornes...)" class="noeuds' + (state.nodesOff ? '' : ' actif') + '">&#9670;</button>' : '')
       + '<button data-z="fond" aria-label="Fond de carte OpenStreetMap" title="Fond de carte OpenStreetMap" class="fond' + (state.fondOn ? ' actif' : '') + '">&#9638;</button></div>'
       + '<div class="attrib" ' + (state.fondOn ? '' : 'hidden') + '>&copy; contributeurs <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a></div>';
+    if (nodeRows.length && state.nodesOff) box.querySelector('svg').classList.add('cache-noeuds');
     state.map = setupZoom(box, { x: 0, y: 0, w: W, h: H });
     renderStats(result.relationId);
     if (state.selected) highlightMap(state.selected);
@@ -774,6 +798,11 @@
       Array.prototype.forEach.call(svg.querySelectorAll('circle'), function (c) {
         c.setAttribute('r', r);
       });
+      var half = 5 * view.w / box.clientWidth;
+      Array.prototype.forEach.call(svg.querySelectorAll('rect.noeud-membre'), function (q) {
+        q.setAttribute('x', Number(q.getAttribute('data-cx')) - half); q.setAttribute('y', Number(q.getAttribute('data-cy')) - half);
+        q.setAttribute('width', 2 * half); q.setAttribute('height', 2 * half);
+      });
       if (state.fondOn) drawTiles(svg, view, box);
     }
     function toDrawing(clientX, clientY) {
@@ -816,7 +845,7 @@
     // Sous le doigt : une pastille d'abord, sinon, parmi les chemins qui se recouvrent, le plus proche du point.
     function pickAt(clientX, clientY) {
       var under = document.elementsFromPoint(clientX, clientY).filter(function (el) { return el.closest && el.closest('[data-sel]'); });
-      var dot = under.filter(function (el) { return el.tagName === 'circle'; })[0];
+      var dot = under.filter(function (el) { return el.tagName === 'circle' || el.tagName === 'rect'; })[0];
       if (dot) return dot;
       var lines = under.filter(function (el) { return el.tagName === 'polyline'; });
       if (lines.length < 2) return under[0] ? under[0].closest('[data-sel]') : null;
@@ -834,7 +863,12 @@
     box.querySelector('.zoom').addEventListener('click', function (e) {
       var b = e.target.closest('button');
       if (!b) return;
-      if (b.dataset.z === 'fond') {
+      if (b.dataset.z === 'noeuds') {
+        state.nodesOff = !state.nodesOff;
+        b.classList.toggle('actif', !state.nodesOff);
+        svg.classList.toggle('cache-noeuds', !!state.nodesOff);
+      }
+      else if (b.dataset.z === 'fond') {
         state.fondOn = !state.fondOn;
         b.classList.toggle('actif', state.fondOn);
         box.querySelector('.attrib').hidden = !state.fondOn;
@@ -872,6 +906,7 @@
     var q = parseSel(sel);
     return F.findPath(state.tree, function (n) {
       if (q.kind === 'way') return n.kind === 'way' && n.id === q.id && !n.missing;
+      if (q.kind === 'node') return n.kind === 'node' && n.id === q.id && n.loaded;
       return n.kind === q.kind && n.relationId === q.id && (n.gapIndex === q.index || n.orderIndex === q.index);
     });
   }
@@ -882,7 +917,7 @@
     if (path) {
       var t = path[path.length - 1];
       if (t.kind === 'way') ways[t.id] = true;
-      else { ways[t.fromRef] = true; ways[t.toRef] = true; }
+      else if (t.kind !== 'node') { ways[t.fromRef] = true; ways[t.toRef] = true; }
     }
     return ways;
   }
@@ -911,7 +946,7 @@
     Array.prototype.forEach.call(svg.querySelectorAll('.trait-trou'), function (el) {
       el.classList.toggle('sel', el.getAttribute('data-sel') === sel);
     });
-    Array.prototype.forEach.call(svg.querySelectorAll('circle'), function (el) {
+    Array.prototype.forEach.call(svg.querySelectorAll('circle, rect.noeud-membre'), function (el) {
       var on = el.getAttribute('data-sel') === sel;
       el.classList.toggle('sel', on);
       if (on) svg.appendChild(el); // au premier plan, sinon les pastilles voisines le cachent
@@ -948,6 +983,8 @@
       if (sel) Array.prototype.forEach.call($('liste').querySelectorAll('[data-sel="' + sel + '"]'), function (el) { el.classList.add('selection'); });
       var c = sel && $('carte').querySelector('circle[data-sel="' + sel + '"]');
       if (c && state.map) state.map.focus(Number(c.getAttribute('cx')), Number(c.getAttribute('cy')));
+      var sq = sel && $('carte').querySelector('rect[data-sel="' + sel + '"]');
+      if (sq && state.map) state.map.focus(Number(sq.getAttribute('data-cx')), Number(sq.getAttribute('data-cy')));
       var line = sel && sel.indexOf('way:') === 0 && $('carte').querySelector('polyline.voie[data-way="' + sel.slice(4) + '"]');
       if (line && state.map) {
         var xs = [], ys = [];
@@ -1008,6 +1045,8 @@
     try {
       state.nodes = {}; state.loaded = {}; state.selected = null; state.window = null;
       state.snapshot = await F.fetchTree(id);
+      try { state.snapshot.elements = state.snapshot.elements.concat(await F.fetchMemberNodes(state.snapshot)); }
+      catch (e) { /* les nœuds membres sont facultatifs */ }
       state.results = F.analyzeTree(state.snapshot, id);
       state.tree = F.buildTree(state.snapshot, id);
       state.live = { snapshot: state.snapshot, results: state.results, tree: state.tree };

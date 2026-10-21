@@ -340,3 +340,19 @@ test('buildTree : une relation sans name prend le libellé construit', () => {
   const t = buildTree({ elements: [W(1, [10, 11]), { type: 'relation', id: 100, tags: { from: 'A', to: 'B' }, members: [m('way', 1)] }] }, 100);
   assert.strictEqual(t.name, 'A → B');
 });
+
+test('buildTree : un nœud membre chargé porte son nom, sa référence et son type (arrêt, borne...)', () => {
+  const n = { type: 'node', id: 50, lat: 1, lon: 2, tags: { name: 'Gare', highway: 'bus_stop', ref: 'B2' } };
+  const t = buildTree({ elements: [W(1, [10, 11]), n, R(100, [m('way', 1), m('node', 50, 'stop'), m('node', 51)])] }, 100);
+  const kids = t.children.filter(c => c.kind === 'node');
+  assert.deepStrictEqual([kids[0].name, kids[0].ref, kids[0].what, kids[0].role], ['Gare', 'B2', 'highway=bus_stop', 'stop']);
+  assert.strictEqual(kids[0].loaded, true);
+  assert.strictEqual(kids[1].loaded, false);   // nœud non chargé : seulement son numéro
+});
+
+test('buildTree : what prend le premier tag parlant (public_transport avant tourism), vide si aucun', () => {
+  const n = (id, tags) => ({ type: 'node', id, lat: 1, lon: 2, tags });
+  const t = buildTree({ elements: [n(50, { public_transport: 'platform', tourism: 'information' }), n(51, { foo: 'bar' }),
+    R(100, [m('node', 50), m('node', 51)])] }, 100);
+  assert.deepStrictEqual(t.children.map(c => c.what), ['public_transport=platform', null]);
+});

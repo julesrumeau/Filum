@@ -31,7 +31,7 @@ Taille (estimation grossière) : S = moins d'une heure, M = quelques heures, L =
 
 ## P2. Fonctionnalités demandées qui élargissent l'outil
 
-- [ ] [M] **Nœuds membres** (arrêts, poteaux, balisage, carrefours) affichés dans l'arbre et sur la carte, optionnels, cliquables ; l'analyse les ignore encore
+- [x] [M] **Nœuds membres** (21/10/2026) : chargés en un appel groupé (`fetchMemberNodes`), nom, ref et type (`public_transport=...`) dans l'arbre, carrés ocre sur la carte, bouton losange pour les masquer, sélection dans les deux sens. Vérifié sur le bus 9948029 (24 arrêts, clics dans les deux sens, aucune erreur). L'analyse les ignore toujours (ordre des arrêts non vérifié), masqués dans la fenêtre sur une période (positions et tags passés non reconstitués)
 - [x] [S] **Relations parentes** (21/10/2026, `osmapi.fetchParents`) : « Fait partie de » sous le résumé, boutons qui lancent l'analyse de la relation parente (vérifié : 12432165 → 13668305 « Sur les pas des Huguenots »). Pour un chemin, voir le point suivant
 - [ ] [M] **Dans quelle sous-relation est la discontinuité**, avec coloration par segments (le « chemin de fer » de Knooppuntnet)
 - [x] [M] **Statistiques pour inciter à redécouper** (21/10/2026, `src/stats.js`) : bloc « Statistiques de la relation » replié sous le résumé : longueur totale (distance sur la sphère, chaque chemin une fois) et plus long chemin, relations, niveaux, chemins, nœuds, maximum de nœuds sur un chemin, 5 relations les plus chargées, avertissement au-delà de 300 membres (seuil à valider : « quelques centaines » selon les bonnes pratiques, pas une règle stricte). Contrôle de plausibilité : EuroVelo 15 Bâle-Karlsruhe 251 km. Pas de nombre de segments (voir le point « sous-relation »)

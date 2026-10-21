@@ -404,3 +404,18 @@ test('fetchWay : le chemin demandé, ou null s\'il n\'existe pas (404)', async (
   assert.strictEqual(none, null);
   await assert.rejects(() => fetchWay(57, async () => { throw new Error('API OSM : réponse 500'); }), /500/);
 });
+
+const { fetchMemberNodes } = require('../src/osmapi.js');
+
+test('fetchMemberNodes : charge les nœuds membres de toutes les relations, une fois chacun, avec leurs tags', async () => {
+  const snap = { elements: [
+    { type: 'relation', id: 1, members: [{ type: 'node', ref: 5, role: 'stop' }, { type: 'way', ref: 9, role: '' }, { type: 'relation', ref: 2, role: '' }] },
+    { type: 'relation', id: 2, members: [{ type: 'node', ref: 5, role: '' }, { type: 'node', ref: 6, role: '' }] },
+  ] };
+  const db = { node5: { type: 'node', id: 5, lat: 1, lon: 2, tags: { name: 'A' } }, node6: { type: 'node', id: 6, lat: 3, lon: 4 } };
+  const api = fakeApi(db);
+  const nodes = await fetchMemberNodes(snap, api.getJson);
+  assert.deepStrictEqual(nodes.map(n => n.id).sort(), [5, 6]);
+  assert.strictEqual(api.calls.length, 1);
+  assert.deepStrictEqual(await fetchMemberNodes({ elements: [{ type: 'relation', id: 1, members: [] }] }, api.getJson), []);
+});

@@ -213,6 +213,19 @@
       .sort(function (a, b) { return a.id - b.id; });
   }
 
+  // Nœuds membres (arrêts, bornes, balisage...) de toutes les relations du cliché, avec leurs tags et positions.
+  async function fetchMemberNodes(snapshot, get) {
+    get = get || getJson;
+    var want = {};
+    snapshot.elements.forEach(function (e) {
+      if (e.type === 'relation') e.members.forEach(function (m) { if (m.type === 'node') want[m.ref] = true; });
+    });
+    var ids = Object.keys(want).map(Number);
+    if (!ids.length) return [];
+    var nodes = await fetchBulk('node', ids, get);
+    return nodes.filter(function (n) { return typeof n.lat === 'number' && typeof n.lon === 'number'; });
+  }
+
   // Un chemin seul (null s'il n'existe pas ou n'est pas visible).
   async function fetchWay(id, get) {
     get = get || getJson;
@@ -225,7 +238,7 @@
     }
   }
 
-  var api = { fetchWay: fetchWay, fetchParents: fetchParents, fetchWayHistories: fetchWayHistories, fetchRelationHistory: fetchRelationHistory, fetchDiscussions: fetchDiscussions, fetchTree: fetchTree, fetchNodes: fetchNodes, fetchHistoryContext: fetchHistoryContext,
+  var api = { fetchMemberNodes: fetchMemberNodes, fetchWay: fetchWay, fetchParents: fetchParents, fetchWayHistories: fetchWayHistories, fetchRelationHistory: fetchRelationHistory, fetchDiscussions: fetchDiscussions, fetchTree: fetchTree, fetchNodes: fetchNodes, fetchHistoryContext: fetchHistoryContext,
     fetchChangesets: fetchChangesets, MAX_IDS: MAX_IDS, MAX_URL_CHARS: MAX_URL_CHARS, API_BASE: BASE };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.Filum = Object.assign(root.Filum || {}, api);
