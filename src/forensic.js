@@ -26,9 +26,9 @@
       var hist = ctx.wayHistories[m.ref];
       if (hist) {
         var v = versionAt(hist, date);
-        if (v && v.visible !== false) elements.push({ type: 'way', id: m.ref, nodes: v.nodes });
+        if (v && v.visible !== false) elements.push({ type: 'way', id: m.ref, nodes: v.nodes, tags: v.tags || {} });
       } else if (ctx.currentWays[m.ref]) {
-        elements.push({ type: 'way', id: m.ref, nodes: ctx.currentWays[m.ref].nodes });
+        elements.push({ type: 'way', id: m.ref, nodes: ctx.currentWays[m.ref].nodes, tags: ctx.currentWays[m.ref].tags || {} });
       }
     });
     return { elements: elements };

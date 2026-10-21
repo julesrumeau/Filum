@@ -272,3 +272,13 @@ test('un préfixe de la timeline donne les périodes comme si la date de fin ét
   assert.strictEqual(spans[0].end, null);
   assert.deepStrictEqual(spansOf(points.filter(p => p.date <= T('2023-06-01')))[0].end.causes[0].user, 'alice');
 });
+
+test('stateAt conserve les tags des chemins (rond-point), historique ou état actuel', () => {
+  const ctx = base();
+  ctx.wayHistories[1] = [wv(1, 1, T('2020-01-01'), [10, 11, 10], { tags: { junction: 'roundabout' } })];
+  delete ctx.wayHistories[2];
+  ctx.currentWays[2] = { nodes: [12, 13], tags: { highway: 'path' } };
+  const snap = stateAt(T('2020-06-01'), ctx, 100);
+  assert.strictEqual(snap.elements.find(e => e.id === 1).tags.junction, 'roundabout');
+  assert.strictEqual(snap.elements.find(e => e.id === 2).tags.highway, 'path');
+});

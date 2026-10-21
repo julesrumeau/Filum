@@ -14,6 +14,15 @@
     return [w.nodes[0], w.nodes[w.nodes.length - 1]];
   }
 
+  // Rond-point : chemin fermé où l'on entre et sort par n'importe lequel de ses nœuds.
+  function isRoundabout(w) {
+    return !!(w.tags && w.tags.junction === 'roundabout' && w.nodes.length > 1);
+  }
+
+  function uniqueNodes(w) {
+    return w.nodes.filter(function (n, i) { return w.nodes.indexOf(n) === i; });
+  }
+
   // Bouts libres possibles après avoir enchaîné le chemin d'extrémités [c, d]
   // sur un bout libre parmi `exits`. Vide si aucun ne se raccorde.
   function advance(exits, c, d) {
@@ -104,11 +113,12 @@
 
     var gaps = [], orderIssues = [], exits = null;
     main.forEach(function (wm, k) {
-      var e = ends(wm.way), fresh = e[0] === e[1] ? [e[0]] : e.slice();
+      var rb = isRoundabout(wm.way);
+      var e = ends(wm.way), fresh = rb ? uniqueNodes(wm.way) : e[0] === e[1] ? [e[0]] : e.slice();
       if (k === 0) { exits = fresh; return; }
       var prev = main[k - 1];
       var turn = DIRECTION[prev.role] && DIRECTION[wm.role] && prev.role !== wm.role;
-      var next = turn ? [] : advance(exits, e[0], e[1]);
+      var next = turn ? [] : rb ? (exits.some(function (x) { return fresh.indexOf(x) >= 0; }) ? fresh : []) : advance(exits, e[0], e[1]);
       if (turn || next.length === 0) {
         var issue = { fromIndex: prev.index, toIndex: wm.index, fromEnds: exits.slice(), toEnds: e.slice() };
         var sameGroup = group[k - 1] === group[k];

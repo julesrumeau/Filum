@@ -310,3 +310,39 @@ test('forward puis backward sans aucun nœud commun : c\'est un vrai trou', () =
   ]);
   assert.strictEqual(analyzeContinuity(snap, 100).gaps.length, 1);
 });
+
+// Rond-point : chemin fermé (junction=roundabout) où l'on entre et sort par n'importe quel nœud.
+function roundabout(id, nodes) { return { type: 'way', id, nodes: nodes.concat([nodes[0]]), tags: { junction: 'roundabout' } }; }
+
+test('rond-point : entrée et sortie par des nœuds différents, ni trou ni problème d\'ordre', () => {
+  const snap = snapshot([
+    way(1, [10, 11, 50]), roundabout(2, [50, 51, 52, 53]), way(3, [52, 60, 61]), rel(100, [1, 2, 3]),
+  ]);
+  const res = analyzeContinuity(snap, 100);
+  assert.deepStrictEqual(res.gaps, []);
+  assert.deepStrictEqual(res.orderIssues, []);
+});
+
+test('rond-point : entre par le milieu d\'une séquence, sort par un autre nœud que le début', () => {
+  const snap = snapshot([
+    way(1, [10, 53]), roundabout(2, [50, 51, 52, 53]), way(3, [51, 60]), rel(100, [1, 2, 3]),
+  ]);
+  const res = analyzeContinuity(snap, 100);
+  assert.deepStrictEqual(res.orderIssues, []);
+});
+
+test('rond-point : un chemin qui ne touche pas le rond-point reste signalé', () => {
+  const snap = snapshot([
+    way(1, [10, 11]), roundabout(2, [50, 51, 52]), way(3, [60, 61]), rel(100, [1, 2, 3]),
+  ]);
+  const res = analyzeContinuity(snap, 100);
+  assert.ok(res.gaps.length >= 1);
+});
+
+test('chemin fermé sans tag junction=roundabout : comportement inchangé', () => {
+  const snap = snapshot([
+    way(1, [10, 11, 50]), way(2, [50, 51, 52, 53, 50]), way(3, [52, 60, 61]), rel(100, [1, 2, 3]),
+  ]);
+  const res = analyzeContinuity(snap, 100);
+  assert.strictEqual(res.orderIssues.length, 1);
+});
