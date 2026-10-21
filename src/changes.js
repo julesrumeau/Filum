@@ -12,6 +12,7 @@
       added: cur.filter(function (n) { return !has(prev, n); }),
       removed: prev.filter(function (n) { return !has(cur, n); }),
       endsChanged: a.length !== b.length || a[0] !== b[0] || a[1] !== b[1],
+      endsBefore: a, endsAfter: b,
     };
   }
 
@@ -66,7 +67,9 @@
       } else {
         events.push(Object.assign(base('relation', relationId, 'modified', v), {
           tags: diffTags(prev.tags, v.tags),
-          members: { added: members.added.length, removed: members.removed.length },
+          members: { added: members.added.length, removed: members.removed.length,
+            addedList: members.added, removedList: members.removed },
+          prevVersion: prev.version,
         }));
       }
       members.added.forEach(function (m) {
@@ -95,7 +98,7 @@
         } else {
           var prev = vs[i - 1];
           events.push(Object.assign(base('way', wayId, 'modified', v), {
-            nodes: diffNodes(prev.nodes, v.nodes), tags: diffTags(prev.tags, v.tags) }));
+            nodes: diffNodes(prev.nodes, v.nodes), tags: diffTags(prev.tags, v.tags), prevVersion: prev.version }));
         }
       });
     });

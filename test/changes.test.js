@@ -20,9 +20,10 @@ function ctx0() {
 const find = (ev, kind, id, action) => ev.filter(e => e.kind === kind && e.id === id && (!action || e.action === action));
 
 test('diffNodes : nœuds ajoutés, retirés, et extrémités changées', () => {
-  assert.deepStrictEqual(diffNodes([10, 11, 12], [10, 12]), { added: [], removed: [11], endsChanged: false });
-  assert.deepStrictEqual(diffNodes([10, 11, 12], [10, 11]), { added: [], removed: [12], endsChanged: true });
-  assert.deepStrictEqual(diffNodes([10, 11], [10, 15, 11]), { added: [15], removed: [], endsChanged: false });
+  assert.deepStrictEqual(diffNodes([10, 11, 12], [10, 12]), { added: [], removed: [11], endsChanged: false, endsBefore: [10, 12], endsAfter: [10, 12] });
+  assert.deepStrictEqual(diffNodes([10, 11, 12], [10, 11]), { added: [], removed: [12], endsChanged: true, endsBefore: [10, 12], endsAfter: [10, 11] });
+  assert.deepStrictEqual(diffNodes([10, 11], [10, 15, 11]), { added: [15], removed: [], endsChanged: false, endsBefore: [10, 11], endsAfter: [10, 11] });
+  assert.deepStrictEqual(diffNodes([], [10, 11]).endsBefore, []);
 });
 
 test('diffTags : clés ajoutées, retirées, modifiées', () => {
@@ -47,7 +48,24 @@ test('une modification de chemin dans la période apparaît, avec auteur, versio
   const ev = windowChanges(c, 100, T('2022-01-01'), T('2023-01-01'));
   const e = find(ev, 'way', 1, 'modified')[0];
   assert.deepStrictEqual([e.version, e.user, e.changeset, e.date], [2, 'bob', 77, T('2022-03-01')]);
-  assert.deepStrictEqual(e.nodes, { added: [], removed: [12], endsChanged: true });
+  assert.deepStrictEqual(e.nodes, { added: [], removed: [12], endsChanged: true, endsBefore: [10, 12], endsAfter: [10, 11] });
+});
+
+test('preuve : une modification de chemin garde la version précédente, une création n\'en a pas', () => {
+  const c = ctx0();
+  c.wayHistories[1].push(wv(1, 2, T('2022-03-01'), [10, 11]));
+  const ev = windowChanges(c, 100, T('2019-01-01'), T('2023-01-01'));
+  assert.strictEqual(find(ev, 'way', 1, 'modified')[0].prevVersion, 1);
+  assert.strictEqual(find(ev, 'way', 1, 'created')[0].prevVersion, undefined);
+});
+
+test('preuve : une modification de la relation liste les membres ajoutés et retirés', () => {
+  const c = ctx0();
+  c.relHistory.push(rv(2, T('2022-02-01'), [2, { type: 'way', ref: 3, role: 'forward' }]));
+  const e = find(windowChanges(c, 100, T('2022-01-01'), T('2023-01-01')), 'relation', 100, 'modified')[0];
+  assert.deepStrictEqual(e.members.addedList, [{ type: 'way', ref: 3, role: 'forward' }]);
+  assert.deepStrictEqual(e.members.removedList, [{ type: 'way', ref: 1, role: '' }]);
+  assert.strictEqual(e.prevVersion, 1);
 });
 
 test('un chemin créé il y a longtemps et non modifié dans la période n\'apparaît pas', () => {
@@ -102,7 +120,7 @@ test('modifier seulement les tags d\'un chemin : modifié, nœuds inchangés, ta
   const c = ctx0();
   c.wayHistories[1].push(wv(1, 2, T('2022-03-01'), [10, 11, 12], { tags: { note: 'ok' } }));
   const e = find(windowChanges(c, 100, T('2022-01-01'), T('2023-01-01')), 'way', 1, 'modified')[0];
-  assert.deepStrictEqual(e.nodes, { added: [], removed: [], endsChanged: false });
+  assert.deepStrictEqual(e.nodes, { added: [], removed: [], endsChanged: false, endsBefore: [10, 12], endsAfter: [10, 12] });
   assert.deepStrictEqual(e.tags.map(t => t.key), ['note']);
 });
 

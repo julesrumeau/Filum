@@ -71,10 +71,49 @@
     return 'modifié' + (parts.length ? ' (' + parts.join(', ') + ')' : '');
   }
 
+  // Preuve avant/après : de quoi contrôler sans aller sur osm.org (versions brutes, nœuds, tags, membres).
+  var PROOF_MAX = 10;
+  function linkList(kind, list) {
+    var shown = list.slice(0, PROOF_MAX).map(function (x) { return osmLink(kind, x); }).join(', ');
+    return shown + (list.length > PROOF_MAX ? ' et ' + (list.length - PROOF_MAX) + ' autre(s)' : '');
+  }
+  function versionLink(kind, id, v) {
+    return '<a href="https://api.openstreetmap.org/api/0.6/' + kind + '/' + id + '/' + v + '" target="_blank" rel="noopener">v' + v + '</a>';
+  }
+  function proofHtml(e) {
+    if (e.action !== 'modified' && e.action !== 'created') return '';
+    var rows = [];
+    if (e.prevVersion) {
+      rows.push('Versions : ' + versionLink(e.kind, e.id, e.prevVersion) + ' (avant) → ' + versionLink(e.kind, e.id, e.version)
+        + ' (après), données brutes de l\'API. <a href="https://www.openstreetmap.org/' + e.kind + '/' + e.id
+        + '/history" target="_blank" rel="noopener">Historique complet</a>');
+    }
+    if (e.nodes) {
+      if (e.nodes.endsChanged && e.nodes.endsBefore.length) {
+        rows.push('Extrémités : avant ' + linkList('node', e.nodes.endsBefore) + ', après ' + linkList('node', e.nodes.endsAfter));
+      }
+      if (e.nodes.removed.length) rows.push('Nœuds retirés : ' + linkList('node', e.nodes.removed));
+      if (e.nodes.added.length && e.action !== 'created') rows.push('Nœuds ajoutés : ' + linkList('node', e.nodes.added));
+    }
+    (e.tags || []).slice(0, PROOF_MAX).forEach(function (t) {
+      rows.push('Tag ' + esc(t.key) + ' : ' + (t.before === undefined ? '(absent)' : '« ' + esc(t.before) + ' »')
+        + ' → ' + (t.after === undefined ? '(retiré)' : '« ' + esc(t.after) + ' »'));
+    });
+    if (e.members && e.members.addedList) {
+      var key = function (m) { return m.type + ' ' + osmLink(m.type, m.ref) + (m.role ? ' (' + esc(m.role) + ')' : ''); };
+      if (e.members.addedList.length) rows.push('Membres ajoutés : ' + e.members.addedList.slice(0, PROOF_MAX).map(key).join(', ')
+        + (e.members.addedList.length > PROOF_MAX ? ' et ' + (e.members.addedList.length - PROOF_MAX) + ' autre(s)' : ''));
+      if (e.members.removedList.length) rows.push('Membres retirés : ' + e.members.removedList.slice(0, PROOF_MAX).map(key).join(', ')
+        + (e.members.removedList.length > PROOF_MAX ? ' et ' + (e.members.removedList.length - PROOF_MAX) + ' autre(s)' : ''));
+    }
+    if (!rows.length) return '';
+    return '<details class="preuve"><summary>Preuve</summary><div>' + rows.join('<br>') + '</div></details>';
+  }
+
   function eventLine(e) {
     return '<div class="ev ev-' + e.action + '">' + esc(eventText(e)) + ' <span class="detail">par ' + esc(e.user) + ', '
       + fmtDate(e.date) + ', <a href="https://www.openstreetmap.org/changeset/' + e.changeset
-      + '" target="_blank" rel="noopener">changeset ' + e.changeset + '</a></span></div>';
+      + '" target="_blank" rel="noopener">changeset ' + e.changeset + '</a></span>' + proofHtml(e) + '</div>';
   }
 
   // Les nombreuses versions de la relation sont résumées en une ligne, détail à ouvrir.
@@ -92,11 +131,7 @@
   function eventsHtml(n) {
     if (!n.events || !n.events.length) return '';
     if (n.kind === 'relation' && n.events.length > 2) return relationEventsHtml(n);
-    return '<div class="evenements">' + n.events.map(function (e) {
-      return '<div class="ev ev-' + e.action + '">' + esc(eventText(e)) + ' <span class="detail">par ' + esc(e.user) + ', '
-        + fmtDate(e.date) + ', <a href="https://www.openstreetmap.org/changeset/' + e.changeset
-        + '" target="_blank" rel="noopener">changeset ' + e.changeset + '</a></span></div>';
-    }).join('') + '</div>';
+    return '<div class="evenements">' + n.events.map(eventLine).join('') + '</div>';
   }
 
   function nodeIds(list) { return list.map(function (id) { return '#' + id; }).join(' ou '); }
