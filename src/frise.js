@@ -16,14 +16,6 @@
     return new Date(Math.round(t)).toISOString().replace(/\.\d+Z$/, 'Z');
   }
 
-  // L'historique chargé, sans les versions postérieures à `toIso` (la copie ne modifie pas l'original).
-  function truncateCtx(ctx, toIso) {
-    function keep(list) { return list.filter(function (v) { return v.timestamp <= toIso; }); }
-    var ways = {};
-    Object.keys(ctx.wayHistories).forEach(function (id) { ways[id] = keep(ctx.wayHistories[id]); });
-    return { relHistory: keep(ctx.relHistory), wayHistories: ways, currentWays: ctx.currentWays, truncated: ctx.truncated };
-  }
-
   // Périodes de rupture qui touchent la fenêtre commençant à `fromIso` : celles terminées avant sont
   // retirées, celles commencées avant sont gardées et marquées startsBeforeWindow.
   function clipSpans(spans, fromIso) {
@@ -85,7 +77,7 @@
     return { date: date, version: best, span: span };
   }
 
-  var api = { hoverInfo: hoverInfo, estimateLoad: estimateLoad, splitSpans: splitSpans, toFraction: toFraction, fromFraction: fromFraction, truncateCtx: truncateCtx,
+  var api = { hoverInfo: hoverInfo, estimateLoad: estimateLoad, splitSpans: splitSpans, toFraction: toFraction, fromFraction: fromFraction,
     clipSpans: clipSpans, bandsOf: bandsOf, tickFractions: tickFractions };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.Filum = Object.assign(root.Filum || {}, api);

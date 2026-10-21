@@ -62,10 +62,10 @@ Taille (estimation grossière) : S = moins d'une heure, M = quelques heures, L =
 
 ## P4. Dépôt, déploiement et hygiène
 
-- [ ] [S] Commiter et pousser `CLAUDE.md` et `TODO.md` (modifiés depuis le dernier commit), et republier `main` après chaque lot de corrections (sur ordre de l'utilisateur)
-- [ ] [S] Retirer le code mort : `src/overpass.js` (plus chargé par la page), `truncateCtx` dans `src/frise.js` (plus utilisé)
-- [ ] [M] `src/app.js` fait environ 770 lignes : le découper avant d'atteindre la règle de 1 000 lignes ; vérifier la règle de 100 lignes par fonction
-- [ ] [S] Mettre le README à jour quand la saisie ou les limites changent
+- [x] [S] Commiter et pousser `CLAUDE.md` et `TODO.md`, republier `main` après chaque lot (sur ordre de l'utilisateur) : fait à chaque lot, dernier lot P4 le 21/10/2026
+- [x] [S] Code mort retiré (21/10/2026) : `src/overpass.js` et `truncateCtx` (avec ses 2 tests)
+- [x] [M] `src/app.js` découpé (21/10/2026) : 1 171 lignes avant, 6 fichiers de 100 à 420 lignes (voir CLAUDE.md). `setupZoom` ramenée de 105 à 97 lignes. Garde-fous dans `test/hygiene.test.js` (fichiers chargés, 1 000 lignes, 100 lignes par fonction, texte OSM non échappé)
+- [x] [S] README à jour (21/10/2026) : à refaire à chaque changement de saisie ou de limites
 - [ ] [S] Test de fumée navigateur (Playwright, hors dépôt) avant et après chaque publication, y compris sur l'adresse GitHub Pages
 - [ ] [M] Tester l'écran tactile, un petit écran réel et d'autres navigateurs que Chromium
 - Convention : toujours donner des liens osm.org complets et cliquables

@@ -69,7 +69,7 @@ Données © contributeurs OpenStreetMap, sous licence [ODbL](https://www.openstr
 Pas de dépendance, pas d'étape de construction : des scripts classiques, qui tiennent en `file://`.
 
 ```
-npm test        # 233 tests (node:test)
+npm test        # 240 tests (node:test)
 ```
 
 | Fichier | Rôle |
@@ -83,7 +83,7 @@ npm test        # 233 tests (node:test)
 | `src/rings.js`, `src/repair.js` | Anneaux des polygones, pistes de réparation d'un trou |
 | `src/stats.js` | Longueur, taille de la structure |
 | `src/input.js` | Saisie (numéro, adresse) et paramètres d'adresse |
-| `src/app.js`, `index.html` | Interface |
+| `src/ui-*.js`, `src/app.js`, `src/html.js`, `index.html` | Interface (arbre, carte, sélection, frise), échappement du texte venu d'OSM |
 
 La logique est pure et testée d'abord (tests écrits avant le code). `CLAUDE.md` contient les décisions, les mesures et les pièges rencontrés ; `TODO.md`, ce qui reste à faire.
 

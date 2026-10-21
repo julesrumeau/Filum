@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert');
-const { toFraction, fromFraction, truncateCtx, clipSpans, bandsOf, tickFractions } = require('../src/frise.js');
+const { toFraction, fromFraction, clipSpans, bandsOf, tickFractions } = require('../src/frise.js');
 
 const MIN = '2020-01-01T00:00:00Z', MAX = '2022-01-01T00:00:00Z'; // 731 jours (2020 bissextile)
 
@@ -20,25 +20,6 @@ test('fromFraction est l\'inverse de toFraction, au format ISO sans milliseconde
   assert.strictEqual(fromFraction(0, MIN, MAX), MIN);
   assert.strictEqual(fromFraction(1, MIN, MAX), MAX);
   assert.strictEqual(fromFraction(366 / 731, MIN, MAX), '2021-01-01T00:00:00Z');
-});
-
-test('truncateCtx retire les versions postérieures à la date, de la relation et des chemins', () => {
-  const ctx = {
-    relHistory: [{ version: 1, timestamp: '2020-02-01T00:00:00Z' }, { version: 2, timestamp: '2021-06-01T00:00:00Z' }],
-    wayHistories: { 1: [{ version: 1, timestamp: '2020-02-01T00:00:00Z' }, { version: 2, timestamp: '2021-09-01T00:00:00Z' }] },
-    currentWays: { 9: { id: 9 } }, truncated: true,
-  };
-  const t = truncateCtx(ctx, '2021-01-01T00:00:00Z');
-  assert.deepStrictEqual(t.relHistory.map(v => v.version), [1]);
-  assert.deepStrictEqual(t.wayHistories[1].map(v => v.version), [1]);
-  assert.deepStrictEqual(t.currentWays, ctx.currentWays);
-  assert.strictEqual(t.truncated, true);
-  assert.strictEqual(ctx.relHistory.length, 2); // l'original n'est pas modifié
-});
-
-test('truncateCtx garde la version datée exactement à la limite', () => {
-  const ctx = { relHistory: [{ version: 1, timestamp: '2021-01-01T00:00:00Z' }], wayHistories: {}, currentWays: {} };
-  assert.strictEqual(truncateCtx(ctx, '2021-01-01T00:00:00Z').relHistory.length, 1);
 });
 
 const span = (start, end) => ({ start: { date: start, causes: [] }, end: end ? { date: end, causes: [] } : null, fromCreation: false });
