@@ -346,3 +346,33 @@ test('des identifiants courts restent limités à MAX_IDS par appel', async () =
   assert.ok(counts.every(c => c <= MAX_IDS));
   assert.strictEqual(counts.length, 3);
 });
+
+// Comme l'API réelle : un identifiant absent de la base fait échouer TOUT l'appel groupé (404).
+function strictApi(db) {
+  const calls = [];
+  async function getJson(path) {
+    calls.push(path);
+    const m = path.match(/^(relations|ways|nodes)\.json\?\1=([\d,]+)$/);
+    const kind = m[1].slice(0, -1);
+    const ids = m[2].split(',').map(Number);
+    if (ids.some(id => !db[kind + id])) throw new Error('API OSM : réponse 404 pour ' + path.slice(0, 60));
+    return { elements: ids.map(id => db[kind + id]) };
+  }
+  return { getJson, calls };
+}
+
+test('un chemin inexistant dans un appel groupé ne fait pas échouer les autres', async () => {
+  const db = {
+    relation1: R(1, [{ type: 'way', ref: 10, role: '' }, { type: 'way', ref: 99, role: '' }, { type: 'way', ref: 11, role: '' }]),
+    way10: W(10, [100, 101]), way11: W(11, [101, 102]),
+  };
+  const api = strictApi(db);
+  const snap = await fetchTree(1, api.getJson);
+  const ids = snap.elements.filter(e => e.type === 'way').map(e => e.id).sort();
+  assert.deepStrictEqual(ids, [10, 11]);
+});
+
+test('une erreur autre que 404 est toujours propagée', async () => {
+  const get = async () => { throw new Error('API OSM : réponse 500'); };
+  await assert.rejects(() => fetchTree(1, get), /500/);
+});

@@ -46,11 +46,25 @@
     return out;
   }
 
+  // Un identifiant inexistant (404) fait échouer tout l'appel groupé : on coupe en deux pour l'isoler.
+  // Il est alors simplement absent du résultat (la continuité le compte comme membre manquant).
+  async function getTolerant(path, ids, get) {
+    try {
+      return await get(path + ids.join(','));
+    } catch (e) {
+      if (!/ 404 /.test(e.message)) throw e;
+      if (ids.length === 1) return { elements: [] };
+      var half = Math.ceil(ids.length / 2);
+      var parts = await Promise.all([getTolerant(path, ids.slice(0, half), get), getTolerant(path, ids.slice(half), get)]);
+      return { elements: parts[0].elements.concat(parts[1].elements) };
+    }
+  }
+
   function fetchBulk(kind, ids, get) {
     var prefix = kind + 's.json?' + kind + 's=';
     var room = MAX_URL_CHARS - BASE.length - prefix.length;
     return Promise.all(chunksByLength(ids, MAX_IDS, room).map(function (c) {
-      return get(prefix + c.join(','));
+      return getTolerant(prefix, c, get);
     })).then(function (parts) {
       return parts.reduce(function (all, p) { return all.concat(p.elements); }, []);
     });
