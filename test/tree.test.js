@@ -388,3 +388,17 @@ test('holeSummary : relations avec trou, nombre de trous et de morceaux, les plu
   ];
   assert.deepStrictEqual(holeSummary(rels).map(h => [h.relationId, h.count]), [[2, 3], [4, 2], [1, 1]]);
 });
+
+test('buildTree : un polygone décrit ses anneaux (extérieurs et intérieurs, fermés ou non)', () => {
+  const mp = (ref, role) => ({ type: 'way', ref, role });
+  const t = buildTree({ elements: [
+    W(1, [1, 2, 3, 1]), W(2, [10, 11, 12, 10]), W(3, [20, 21, 22]),
+    { type: 'relation', id: 100, tags: { type: 'multipolygon' }, members: [mp(1, 'outer'), mp(2, 'inner'), mp(3, 'inner')] },
+  ] }, 100);
+  assert.deepStrictEqual(t.rings, { outer: { count: 1, closed: 1 }, inner: { count: 2, closed: 1 }, open: [{ role: 'inner', ways: 1 }] });
+});
+
+test('buildTree : une relation qui n\'est pas un polygone n\'a pas d\'anneaux', () => {
+  const t = buildTree({ elements: [W(1, [1, 2]), R(100, [m('way', 1)])] }, 100);
+  assert.strictEqual(t.rings, undefined);
+});

@@ -31,7 +31,12 @@
   function summaryText(n) {
     var s = n.summary, shown = n.children.filter(function (c) { return c.kind !== 'gap' && c.kind !== 'order'; }).length;
     var parts = [n.hiddenCount === undefined ? shown + ' membre(s)' : shown + ' touché(s) affiché(s), ' + n.hiddenCount + ' masqué(s)'];
-    parts.push(s.isPolygon ? 'polygone' : s.pieces + ' morceau(x)');
+    if (s.isPolygon && n.rings) {
+      var g = n.rings;
+      parts.push('polygone : ' + g.outer.count + ' contour(s) extérieur(s) (' + g.outer.closed + ' fermé(s)), '
+        + g.inner.count + ' trou(s) intérieur(s) (' + g.inner.closed + ' fermé(s))');
+      if (g.open.length) parts.push(g.open.length + ' anneau(x) ouvert(s)');
+    } else parts.push(s.isPolygon ? 'polygone' : s.pieces + ' morceau(x)');
     if (s.gaps) parts.push(s.gaps + ' trou(s)');
     if (s.openEnds) parts.push(s.openEnds + ' bout(s) ouvert(s)');
     if (s.orderIssues) parts.push(s.orderIssues + ' problème(s) d\'ordre');

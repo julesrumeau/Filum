@@ -4,6 +4,7 @@
   var isNode = typeof module !== 'undefined' && module.exports;
   var C = isNode ? require('./continuity.js') : root.Filum;
   var Fx = isNode ? require('./forensic.js') : root.Filum;
+  var R = isNode ? require('./rings.js') : root.Filum;
 
   function metaOf(e) {
     return { version: e.version, user: e.user, timestamp: e.timestamp, changeset: e.changeset };
@@ -55,6 +56,7 @@
           detached: r.detached.length, pieces: r.pieces.length, missing: r.missing.length, isPolygon: r.isPolygon },
         children: [],
       }, metaOf(rel));
+      if (r.isPolygon) node.rings = ringsSummary(rel, ways);
       var path = ancestors.concat([id]);
       var before = {};
       function queue(list, kind, key) {
@@ -161,6 +163,21 @@
     return Object.assign({}, tree, { children: out, hiddenCount: hidden, events: events.filter(function (e) {
       return e.kind === 'relation' && e.id === tree.id;
     }) });
+  }
+
+  // Anneaux d'un polygone : combien d'extérieurs et d'intérieurs, combien sont fermés, lesquels sont ouverts.
+  function ringsSummary(rel, ways) {
+    var wm = [];
+    rel.members.forEach(function (mb) {
+      if (mb.type === 'way' && ways[mb.ref]) wm.push({ ref: mb.ref, role: mb.role || '', nodes: ways[mb.ref].nodes });
+    });
+    var out = { outer: { count: 0, closed: 0 }, inner: { count: 0, closed: 0 }, open: [] };
+    R.buildRings(wm).forEach(function (ring) {
+      out[ring.role].count++;
+      if (ring.closed) out[ring.role].closed++;
+      else out.open.push({ role: ring.role, ways: ring.ways.length });
+    });
+    return out;
   }
 
   // Tags qui disent ce qu'est un nœud membre (arrêt, borne, point de passage...), du plus précis au plus général.

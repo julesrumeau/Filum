@@ -50,7 +50,7 @@ Un nœud déplacé ne casse donc rien, puisque seul compte l'identifiant. Voir �
 ## Limites connues
 
 - **Résultats non validés.** Les faits affichés (quelle version, quel auteur, quels nœuds retirés) se vérifient sur openstreetmap.org, et un cas a été contrôlé en détail (relation 2952375). Rien n'a été confronté à une vérité connue sur d'autres relations. Une modification au moment d'une rupture n'est pas forcément une faute : la personne a pu réparer ou raccrocher un autre chemin, et un gros changeset peut n'avoir aucun rapport avec la relation.
-- **La frise ne marche que pour une relation qui contient directement des chemins**, pas pour une relation parente comme EuroVelo (saisissez le numéro d'une de ses sous-relations).
+- **La frise ne marche que pour une relation qui contient directement des chemins**, pas pour une relation parente comme EuroVelo : le bouton « Enquêter » de la ligne « Où sont les trous » ouvre la sous-relation cassée avec sa frise.
 - **La géométrie n'est pas suivie.** Déplacer un nœud, ou en ajouter ou en retirer au milieu d'un chemin, n'est pas signalé comme un changement de forme.
 - **Positions passées approximatives.** À une date passée, un ancien chemin est dessiné avec des trous là où ses nœuds ont été supprimés depuis. Les sous-relations ne sont pas reconstituées à une date.
 - **Pas encore gérés** : schéma de transport v2, parcours de santé, ordre des arrêts de bus et nœuds membres (ils sont affichés, mais leur ordre n'est pas vérifié), analyse d'un parc qui n'est qu'un chemin fermé sans relation.
@@ -69,7 +69,7 @@ Données © contributeurs OpenStreetMap, sous licence [ODbL](https://www.openstr
 Pas de dépendance, pas d'étape de construction : des scripts classiques, qui tiennent en `file://`.
 
 ```
-npm test        # 225 tests (node:test)
+npm test        # 233 tests (node:test)
 ```
 
 | Fichier | Rôle |
@@ -80,6 +80,7 @@ npm test        # 225 tests (node:test)
 | `src/changes.js` | Ce qui change dans une période (créé, modifié, ajouté, retiré, supprimé) |
 | `src/tree.js` | Arbre des relations, fenêtre sur une période |
 | `src/frise.js`, `src/viewport.js`, `src/tuiles.js` | Échelle de dates, zoom, tuiles du fond de carte |
+| `src/rings.js`, `src/repair.js` | Anneaux des polygones, pistes de réparation d'un trou |
 | `src/stats.js` | Longueur, taille de la structure |
 | `src/input.js` | Saisie (numéro, adresse) et paramètres d'adresse |
 | `src/app.js`, `index.html` | Interface |
