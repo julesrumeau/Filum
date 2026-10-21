@@ -244,11 +244,20 @@ test('windowTree : les événements d\'un élément sont rattachés à sa ligne,
   assert.deepStrictEqual(w.events.map(e => e.action), ['added-to-relation', 'modified']);
 });
 
-test('windowTree : une ligne de trou est gardée si l\'un des deux chemins est visible, sinon masquée', () => {
-  const only1 = windowTree(windowDemo(), [ev('way', 2, 'modified', '2022-01-01T00:00:00Z')]);
-  assert.ok(only1.children.some(c => c.kind === 'gap')); // le trou est entre les chemins 2 et 3
+test('windowTree : un trou est toujours gardé, même si ses deux chemins n\'ont pas bougé dans la période', () => {
   const none = windowTree(windowDemo(), [ev('way', 1, 'modified', '2022-01-01T00:00:00Z')]);
-  assert.ok(!none.children.some(c => c.kind === 'gap'));
+  assert.ok(none.children.some(c => c.kind === 'gap')); // le trou est entre les chemins 2 et 3
+  const nothing = windowTree(windowDemo(), []);
+  assert.strictEqual(nothing.children.filter(c => c.kind === 'gap').length, 1);
+});
+
+test('windowTree : un problème d\'ordre n\'est gardé que si l\'un des deux chemins est visible', () => {
+  const t = buildTree({ elements: [
+    W(1, [10, 11]), W(2, [20, 21]), W(3, [11, 12, 20]), R(100, [m('way', 1), m('way', 2), m('way', 3)]),
+  ] }, 100);
+  assert.ok(t.children.some(c => c.kind === 'order'));
+  assert.ok(!windowTree(t, [ev('way', 3, 'modified', '2022-01-01T00:00:00Z')]).children.some(c => c.kind === 'order'));
+  assert.ok(windowTree(t, [ev('way', 2, 'modified', '2022-01-01T00:00:00Z')]).children.some(c => c.kind === 'order'));
 });
 
 test('windowTree : un chemin retiré de la relation apparaît comme ligne à part, une seule fois', () => {
@@ -268,9 +277,9 @@ test('windowTree : la racine garde ses propres événements, son statut et son r
   assert.deepStrictEqual(t.summary, full.summary);
 });
 
-test('windowTree : sans aucun événement, plus rien sauf la racine, et tout est compté comme masqué', () => {
+test('windowTree : sans aucun événement, plus rien sauf les trous, et tout est compté comme masqué', () => {
   const t = windowTree(windowDemo(), []);
-  assert.deepStrictEqual(t.children, []);
+  assert.deepStrictEqual(t.children.map(c => c.kind), ['gap']);
   assert.strictEqual(t.hiddenCount, 5);
   assert.deepStrictEqual(t.events, []);
 });

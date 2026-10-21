@@ -136,11 +136,12 @@
       kept.push(Object.assign({}, c, { events: e }));
       if (c.kind === 'way') keptWays[c.id] = true;
     });
-    // lignes de trou et d'ordre, gardées si l'un des deux chemins reste visible, à leur place d'origine
+    // trous toujours gardés (état à la date de fin, c'est ce que l'on cherche) ; lignes d'ordre gardées
+    // si l'un des deux chemins reste visible ; à leur place d'origine
     var out = [], k = 0;
     tree.children.forEach(function (c) {
       if (c.kind === 'gap' || c.kind === 'order') {
-        if (keptWays[c.fromRef] || keptWays[c.toRef]) out.push(c);
+        if (c.kind === 'gap' || keptWays[c.fromRef] || keptWays[c.toRef]) out.push(c);
         return;
       }
       var e = evs(c.kind, c.id);

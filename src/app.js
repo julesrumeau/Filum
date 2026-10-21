@@ -108,7 +108,7 @@
 
   function rowHtml(n) {
     if (n.removed) {
-      return '<span class="pastille vide"></span>' + (n.kind === 'way' ? 'chemin ' : n.kind === 'node' ? 'nœud ' : 'relation ')
+      return '<span class="pastille mauvais" title="Retiré ou supprimé dans la période"></span>' + (n.kind === 'way' ? 'chemin ' : n.kind === 'node' ? 'nœud ' : 'relation ')
         + osmLink(n.kind, n.id) + (n.role ? '<span class="role">' + esc(n.role) + '</span>' : '')
         + ' <span class="detail">n\'est plus dans la relation à la date de fin</span>';
     }
