@@ -31,8 +31,8 @@
     group.points.slice(0, 3000).forEach(function (pt) {
       var c = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
       c.setAttribute('class', 'contenu');
-      c.setAttribute('cx', ((pt.lon - p.minU) * p.scale + p.offX).toFixed(1));
-      c.setAttribute('cy', ((p.maxV - F.mercV(pt.lat)) * p.scale + p.offY).toFixed(1));
+      c.setAttribute('cx', ((pt.lon - p.minU) * p.scale + p.offX).toFixed(3));
+      c.setAttribute('cy', ((p.maxV - F.mercV(pt.lat)) * p.scale + p.offY).toFixed(3));
       c.setAttribute('pointer-events', 'none');
       g.appendChild(c);
     });

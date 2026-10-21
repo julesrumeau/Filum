@@ -101,8 +101,8 @@
     var scale = Math.min((W - 2 * pad) / spanX, (H - 2 * pad) / spanY);
     var offX = (W - spanX * scale) / 2, offY = (H - spanY * scale) / 2;
     state.proj = { minU: minLon, maxV: maxV, scale: scale, offX: offX, offY: offY };
-    function X(p) { return ((p.lon - minLon) * scale + offX).toFixed(1); }
-    function Y(p) { return ((maxV - F.mercV(p.lat)) * scale + offY).toFixed(1); }
+    function X(p) { return ((p.lon - minLon) * scale + offX).toFixed(3); }
+    function Y(p) { return ((maxV - F.mercV(p.lat)) * scale + offY).toFixed(3); }
     var svg = '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="Tracé de la relation"><g id="tuiles"></g>';
     // Chaque chemin est dessiné deux fois : un trait épais invisible pour le clic, un trait fin visible.
     lines.forEach(function (l) {
@@ -169,23 +169,42 @@
     var u0 = (view.x - p.offX) / p.scale + p.minU, u1 = (view.x + view.w - p.offX) / p.scale + p.minU;
     var v1 = p.maxV - (view.y - p.offY) / p.scale, v0 = p.maxV - (view.y + view.h - p.offY) / p.scale;
     var z = F.chooseZoom(view.w / box.clientWidth / p.scale);
-    var tiles = F.tilesFor(u0, u1, v0, v1, z, 40), want = {};
+    var tiles = F.tilesFor(u0, u1, v0, v1, z, 40), want = {}, pending = 0;
+    z = tiles.length ? tiles[0].z : z;   // tilesFor peut avoir baissé le niveau
+    g.setAttribute('data-z', z);
     tiles.forEach(function (t) { want[t.z + '/' + t.x + '/' + t.y] = t; });
     Array.prototype.forEach.call(g.querySelectorAll('image'), function (im) {
-      if (want[im.getAttribute('data-t')]) delete want[im.getAttribute('data-t')];
-      else g.removeChild(im);
+      var key = im.getAttribute('data-t');
+      if (want[key]) delete want[key];
+      else if (Number(key.split('/')[0]) === z) g.removeChild(im);   // même niveau, hors de la vue
+      // un autre niveau reste dessous jusqu'à ce que les nouvelles tuiles soient arrivées (voir dropOldLevels)
     });
+    // Recouvrement d'un millième de tuile (environ un demi-pixel) contre les coutures, proportionnel à la tuile :
+    // un recouvrement en unités du dessin deviendrait énorme en zoomant.
+    function dropOldLevels() {
+      Array.prototype.forEach.call(g.querySelectorAll('image'), function (im) {
+        if (Number(im.getAttribute('data-t').split('/')[0]) !== Number(g.getAttribute('data-z'))) g.removeChild(im);
+      });
+    }
+    function done() { if (--pending <= 0) dropOldLevels(); }
     Object.keys(want).forEach(function (key) {
       var t = want[key], im = document.createElementNS('http://www.w3.org/2000/svg', 'image');
+      var w = (t.u1 - t.u0) * p.scale, h = (t.v0 - t.v1) * p.scale;
       im.setAttribute('data-t', key);
-      im.setAttribute('href', 'https://tile.openstreetmap.org/' + key + '.png');
-      im.setAttribute('x', (t.u0 - p.minU) * p.scale + p.offX - 0.3);
-      im.setAttribute('y', (p.maxV - t.v0) * p.scale + p.offY - 0.3);
-      im.setAttribute('width', (t.u1 - t.u0) * p.scale + 0.6);
-      im.setAttribute('height', (t.v0 - t.v1) * p.scale + 0.6);
+      im.setAttribute('x', (t.u0 - p.minU) * p.scale + p.offX - w * 0.0005);
+      im.setAttribute('y', (p.maxV - t.v0) * p.scale + p.offY - h * 0.0005);
+      im.setAttribute('width', w * 1.001);
+      im.setAttribute('height', h * 1.001);
       im.setAttribute('preserveAspectRatio', 'none');
+      pending++;
+      im.addEventListener('load', done);
+      im.addEventListener('error', function () { if (im.parentNode) im.parentNode.removeChild(im); done(); });
+      im.setAttribute('href', 'https://tile.openstreetmap.org/' + key + '.png');
       g.appendChild(im);
     });
+    if (!pending) dropOldLevels();
+    clearTimeout(g.dropTimer);
+    g.dropTimer = setTimeout(dropOldLevels, 3000);
   }
 
   // Distance d'un point à un segment (mêmes unités que les coordonnées du dessin).

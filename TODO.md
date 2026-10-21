@@ -37,6 +37,7 @@ Taille (estimation grossière) : S = moins d'une heure, M = quelques heures, L =
 - Interface : arbre dépliable avec chemins sans problème repliés, carte avec zoom, sélection dans les deux sens, trait pointillé des trous, tracé coloré par morceau, fond de carte OSM, nœuds membres, statistiques
 - Forensic : périodes de rupture, frise à deux curseurs avec bulle, fenêtre sur les modifications, preuve avant/après, masquage des modifications sans effet, auteur, date, changeset et discussion, « Chercher une cause » (contrôlé sur 2952375)
 - Polygones : bouts non raccordés classés libre, posé sur le milieu d'un chemin, embranchement ; liste A, B, A = un trou (trous = morceaux - 1, mesuré sur 8 relations) (21/10/2026)
+- Fond de carte : tuiles décalées en zoomant corrigées (21/10/2026, voir CLAUDE.md)
 - Contenu d'un polygone (21/10/2026, `contenu.js`, `ui-contenu.js`) : bouton sous les statistiques d'un polygone, éléments étiquetés regroupés par type (Orangerie 274225 : 3 176 arbres, 177 bancs, 5 aires de jeux, identique à la mesure du 18/10), points dessinés sur la carte ; zone limitée à 6 requêtes de 0,25 degré carré, Paris refusé par l'API (plus de 50 000 éléments), état actuel seulement
 - Saisie : numéro, adresse openstreetmap.org, `r123`, chemin (`way 123`), relations parentes, paramètres dans l'adresse
 - Hygiène : `app.js` découpé en fichiers `ui-*`, échappement du texte OSM (`html.js`), code mort retiré, `test/hygiene.test.js`, 240 tests
