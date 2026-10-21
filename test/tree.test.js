@@ -317,3 +317,26 @@ test('groupQuiet : une suite trop courte reste telle quelle, une note ou un chem
   assert.strictEqual(g.length, 6);
   assert.ok(g.every(x => !x.quiet));
 });
+
+const { relationLabel } = require('../src/tree.js');
+
+test('relationLabel : name d\'abord, sinon départ → arrivée, sinon ref, sinon rien', () => {
+  assert.strictEqual(relationLabel({ name: 'GR 965', from: 'A', to: 'B' }), 'GR 965');
+  assert.strictEqual(relationLabel({ from: 'Metz', to: 'Nancy' }), 'Metz → Nancy');
+  assert.strictEqual(relationLabel({ from: 'Metz', via: 'Pont-à-Mousson', to: 'Nancy' }), 'Metz → Pont-à-Mousson → Nancy');
+  assert.strictEqual(relationLabel({ ref: '12', network: 'lwn' }), 'ref 12');
+  assert.strictEqual(relationLabel({ from: 'Metz' }), 'depuis Metz');
+  assert.strictEqual(relationLabel({ type: 'route' }), null);
+  assert.strictEqual(relationLabel(undefined), null);
+});
+
+test('relationLabel : name:fr utilisé à défaut de name, et ref ajouté derrière name si absent du nom', () => {
+  assert.strictEqual(relationLabel({ 'name:fr': 'Sentier' }), 'Sentier');
+  assert.strictEqual(relationLabel({ name: 'Sentier des Roches', ref: 'GR5' }), 'Sentier des Roches (GR5)');
+  assert.strictEqual(relationLabel({ name: 'GR5 Nord', ref: 'GR5' }), 'GR5 Nord');
+});
+
+test('buildTree : une relation sans name prend le libellé construit', () => {
+  const t = buildTree({ elements: [W(1, [10, 11]), { type: 'relation', id: 100, tags: { from: 'A', to: 'B' }, members: [m('way', 1)] }] }, 100);
+  assert.strictEqual(t.name, 'A → B');
+});

@@ -366,7 +366,10 @@
     $('frise-fond').innerHTML = html;
     $('date-g').textContent = 'du ' + fmtDate(fr.from);
     $('date-d').textContent = 'au ' + (fr.toIsMax ? 'aujourd\'hui' : fmtDate(fr.to));
-    $('frise-legende').textContent = 'Traits : versions de la relation (' + fr.hist.length + ').'
+    var vers = fr.hist.length === 1
+      ? 'La relation elle-même n\'a qu\'une version (un seul trait) : ses modifications se trouvent surtout dans l\'historique de ses chemins.'
+      : 'Traits : les ' + fr.hist.length + ' versions de la relation.';
+    $('frise-legende').textContent = vers
       + (fr.allSpans ? ' Rouge : périodes où la relation est cassée (toute son histoire, ne dépend pas des curseurs). Zone grisée : hors de la période choisie.'
         : ' Les périodes où la relation est cassée (en rouge) apparaîtront après la lecture de l\'historique : choisissez une période puis « Analyser ».')
       + (uncertain ? ' Rayé : période approximative, il reste ' + pending + ' chemin(s) dont l\'historique n\'est pas lu.' : '');
@@ -584,9 +587,24 @@
         + '<polyline class="voie ' + (l.action || '') + '" fill="none" stroke="var(--trace)" stroke-width="2" vector-effect="non-scaling-stroke" '
         + 'data-way="' + l.id + '" points="' + pts2 + '"/>';
     });
+    // Trait pointillé entre les deux bouts libres les plus proches du trou
+    function gapLine(g, i, relId) {
+      var best = null;
+      g.fromEnds.forEach(function (a) {
+        g.toEnds.forEach(function (b) {
+          if (!nodes[a] || !nodes[b]) return;
+          var d = Math.pow(X(nodes[a]) - X(nodes[b]), 2) + Math.pow(Y(nodes[a]) - Y(nodes[b]), 2);
+          if (!best || d < best.d) best = { d: d, a: nodes[a], b: nodes[b] };
+        });
+      });
+      return best ? '<line class="trait-trou" data-sel="gap:' + relId + ':' + i + '" x1="' + X(best.a) + '" y1="' + Y(best.a)
+        + '" x2="' + X(best.b) + '" y2="' + Y(best.b) + '" stroke="var(--alerte)" stroke-width="2" stroke-dasharray="6 4" '
+        + 'vector-effect="non-scaling-stroke" pointer-events="none"/>' : '';
+    }
     function dots(list, color, kind, relId) {
       list.forEach(function (g, i) {
         if (state.window && kind !== 'open' && !state.window.rows[kind + ':' + relId + ':' + i]) return;
+        if (kind === 'gap') svg += gapLine(g, i, relId);
         g.fromEnds.concat(g.toEnds).forEach(function (id) {
           var n = nodes[id];
           if (n) svg += '<circle class="pastille-carte" data-sel="' + kind + ':' + relId + ':' + i + '" cx="' + X(n)
@@ -668,6 +686,13 @@
     return {
       refresh: apply,
       // Centre la vue sur un point du dessin, avec un zoom suffisant pour le voir.
+      // Cadre une boîte du dessin avec de la marge (un chemin minuscule reste visible, un grand tient en entier).
+      fit: function (x0, y0, x1, y1) {
+        var ratio = full.w / full.h, minW = full.w / 60;
+        var w = Math.min(full.w, Math.max((x1 - x0) * 1.6, (y1 - y0) * 1.6 * ratio, minW)), h = w / ratio;
+        view = F.panBy({ x: (x0 + x1) / 2 - w / 2, y: (y0 + y1) / 2 - h / 2, w: w, h: h }, full, 0, 0);
+        apply();
+      },
       focus: function (cx, cy) {
         var w = full.w / 6, h = full.h / 6;
         view = F.panBy({ x: cx - w / 2, y: cy - h / 2, w: w, h: h }, full, 0, 0);
@@ -722,6 +747,9 @@
     Array.prototype.forEach.call(svg.querySelectorAll('.voie'), function (el) {
       el.classList.toggle('sel', !!ways[el.getAttribute('data-way')]);
     });
+    Array.prototype.forEach.call(svg.querySelectorAll('.trait-trou'), function (el) {
+      el.classList.toggle('sel', el.getAttribute('data-sel') === sel);
+    });
     Array.prototype.forEach.call(svg.querySelectorAll('circle'), function (el) {
       var on = el.getAttribute('data-sel') === sel;
       el.classList.toggle('sel', on);
@@ -759,6 +787,12 @@
       if (sel) Array.prototype.forEach.call($('liste').querySelectorAll('[data-sel="' + sel + '"]'), function (el) { el.classList.add('selection'); });
       var c = sel && $('carte').querySelector('circle[data-sel="' + sel + '"]');
       if (c && state.map) state.map.focus(Number(c.getAttribute('cx')), Number(c.getAttribute('cy')));
+      var line = sel && sel.indexOf('way:') === 0 && $('carte').querySelector('polyline.voie[data-way="' + sel.slice(4) + '"]');
+      if (line && state.map) {
+        var xs = [], ys = [];
+        line.getAttribute('points').split(' ').forEach(function (pt) { var c2 = pt.split(','); xs.push(Number(c2[0])); ys.push(Number(c2[1])); });
+        state.map.fit(Math.min.apply(null, xs), Math.min.apply(null, ys), Math.max.apply(null, xs), Math.max.apply(null, ys));
+      }
     }
   }
 

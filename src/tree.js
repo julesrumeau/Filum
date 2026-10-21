@@ -48,7 +48,7 @@
     function relationNode(id, role, ancestors) {
       var rel = rels[id], r = analyze(id);
       var node = Object.assign({
-        kind: 'relation', id: id, role: role, name: (rel.tags && rel.tags.name) || null,
+        kind: 'relation', id: id, role: role, name: relationLabel(rel.tags),
         status: statusOf(r), notes: notesOf(rel),
         summary: { gaps: r.gaps.length, orderIssues: r.orderIssues.length, openEnds: r.openEnds.length,
           detached: r.detached.length, pieces: r.pieces.length, missing: r.missing.length, isPolygon: r.isPolygon },
@@ -162,6 +162,17 @@
     }) });
   }
 
+  // Libellé d'une relation : name (avec ref entre parenthèses), sinon départ → étapes → arrivée, sinon ref.
+  function relationLabel(tags) {
+    var t = tags || {};
+    var name = t.name || t['name:fr'] || null;
+    if (name) return t.ref && name.indexOf(t.ref) < 0 ? name + ' (' + t.ref + ')' : name;
+    if (t.from && t.to) return [t.from, t.via, t.to].filter(Boolean).join(' → ');
+    if (t.from) return 'depuis ' + t.from;
+    if (t.to) return 'vers ' + t.to;
+    return t.ref ? 'ref ' + t.ref : null;
+  }
+
   // Regroupe les suites d'au moins `minRun` chemins sans rien à signaler (ni bord de trou, ni note, ni absent,
   // ni événement) en { quiet: true, items }. Les trous, lignes d'ordre et chemins à examiner restent visibles.
   function groupQuiet(children, minRun) {
@@ -179,7 +190,7 @@
     return out;
   }
 
-  var api = { groupQuiet: groupQuiet, windowTree: windowTree, buildTree: buildTree, wayRefsOf: wayRefsOf, findPath: findPath };
+  var api = { relationLabel: relationLabel, groupQuiet: groupQuiet, windowTree: windowTree, buildTree: buildTree, wayRefsOf: wayRefsOf, findPath: findPath };
   if (isNode) module.exports = api;
   else root.Filum = Object.assign(root.Filum || {}, api);
 })(typeof self !== 'undefined' ? self : this);

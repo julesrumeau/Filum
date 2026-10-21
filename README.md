@@ -65,7 +65,7 @@ Données © contributeurs OpenStreetMap, sous licence [ODbL](https://www.openstr
 Pas de dépendance, pas d'étape de construction : des scripts classiques, qui tiennent en `file://`.
 
 ```
-npm test        # 192 tests (node:test)
+npm test        # 195 tests (node:test)
 ```
 
 | Fichier | Rôle |
