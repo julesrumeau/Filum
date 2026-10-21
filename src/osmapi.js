@@ -205,7 +205,27 @@
     return r.elements.slice().sort(function (a, b) { return a.version - b.version; });
   }
 
-  var api = { fetchWayHistories: fetchWayHistories, fetchRelationHistory: fetchRelationHistory, fetchDiscussions: fetchDiscussions, fetchTree: fetchTree, fetchNodes: fetchNodes, fetchHistoryContext: fetchHistoryContext,
+  // Relations qui contiennent un chemin ou une relation (« partie de »), avec leurs tags et leur nombre de membres.
+  async function fetchParents(kind, id, get) {
+    get = get || getJson;
+    var res = await get(kind + '/' + id + '/relations.json');
+    return res.elements.map(function (r) { return { id: r.id, tags: r.tags || {}, members: (r.members || []).length }; })
+      .sort(function (a, b) { return a.id - b.id; });
+  }
+
+  // Un chemin seul (null s'il n'existe pas ou n'est pas visible).
+  async function fetchWay(id, get) {
+    get = get || getJson;
+    try {
+      var res = await get('ways.json?ways=' + id);
+      return res.elements[0] || null;
+    } catch (e) {
+      if (/ 404 /.test(e.message)) return null;
+      throw e;
+    }
+  }
+
+  var api = { fetchWay: fetchWay, fetchParents: fetchParents, fetchWayHistories: fetchWayHistories, fetchRelationHistory: fetchRelationHistory, fetchDiscussions: fetchDiscussions, fetchTree: fetchTree, fetchNodes: fetchNodes, fetchHistoryContext: fetchHistoryContext,
     fetchChangesets: fetchChangesets, MAX_IDS: MAX_IDS, MAX_URL_CHARS: MAX_URL_CHARS, API_BASE: BASE };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.Filum = Object.assign(root.Filum || {}, api);

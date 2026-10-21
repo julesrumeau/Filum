@@ -376,3 +376,31 @@ test('une erreur autre que 404 est toujours propagée', async () => {
   const get = async () => { throw new Error('API OSM : réponse 500'); };
   await assert.rejects(() => fetchTree(1, get), /500/);
 });
+
+const { fetchParents } = require('../src/osmapi.js');
+
+test('fetchParents : relations qui contiennent un chemin ou une relation, avec nom et type', async () => {
+  const calls = [];
+  const get = async (path) => {
+    calls.push(path);
+    return { elements: [
+      { type: 'relation', id: 7, tags: { name: 'GR 5', type: 'route' }, members: [{}, {}] },
+      { type: 'relation', id: 3, tags: { type: 'multipolygon' }, members: [{}] },
+    ] };
+  };
+  const list = await fetchParents('way', 55, get);
+  assert.deepStrictEqual(calls, ['way/55/relations.json']);
+  assert.deepStrictEqual(list.map(r => r.id), [3, 7]);
+  assert.deepStrictEqual(list[1], { id: 7, tags: { name: 'GR 5', type: 'route' }, members: 2 });
+  assert.deepStrictEqual(await fetchParents('relation', 9, async () => ({ elements: [] })), []);
+});
+
+const { fetchWay } = require('../src/osmapi.js');
+
+test('fetchWay : le chemin demandé, ou null s\'il n\'existe pas (404)', async () => {
+  const ok = await fetchWay(55, async () => ({ elements: [{ type: 'way', id: 55, nodes: [1, 2, 1], tags: { name: 'Parc' } }] }));
+  assert.deepStrictEqual([ok.id, ok.nodes.length], [55, 3]);
+  const none = await fetchWay(56, async () => { throw new Error('API OSM : réponse 404 pour ways.json?ways=56'); });
+  assert.strictEqual(none, null);
+  await assert.rejects(() => fetchWay(57, async () => { throw new Error('API OSM : réponse 500'); }), /500/);
+});

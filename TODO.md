@@ -32,13 +32,13 @@ Taille (estimation grossière) : S = moins d'une heure, M = quelques heures, L =
 ## P2. Fonctionnalités demandées qui élargissent l'outil
 
 - [ ] [M] **Nœuds membres** (arrêts, poteaux, balisage, carrefours) affichés dans l'arbre et sur la carte, optionnels, cliquables ; l'analyse les ignore encore
-- [ ] [S] **Relations parentes** (« Partie de ») via `way/ID/relations` et `relation/ID/relations`
+- [x] [S] **Relations parentes** (21/10/2026, `osmapi.fetchParents`) : « Fait partie de » sous le résumé, boutons qui lancent l'analyse de la relation parente (vérifié : 12432165 → 13668305 « Sur les pas des Huguenots »). Pour un chemin, voir le point suivant
 - [ ] [M] **Dans quelle sous-relation est la discontinuité**, avec coloration par segments (le « chemin de fer » de Knooppuntnet)
 - [ ] [M] **Statistiques pour inciter à redécouper** : longueur totale, sous-relations et niveaux, longueur et nombre de membres par relation, segments, nombre de nœuds, maximum de nœuds par chemin, plus long chemin
 - [ ] [L] **Frise et forensic pour les relations parentes** (EuroVelo, schéma v2, relation 6438529) : historique de chaque sous-relation, par étapes. C'est l'hypothèse de départ (analyse récursive) qui n'est pas réalisée
 - [ ] [M] **Détecter la cause probable** « chemin coupé, un morceau n'a pas été ajouté à la relation » (cas supposé de 2952375)
 - [ ] [M] **Anneaux emboîtés** pour les polygones : contour, trous (`inner`), îlots dans les trous. Lignes dans l'arbre pour les bouts ouverts et les chemins isolés
-- [ ] [M] **Accepter un numéro de chemin** comme point de départ (beaucoup de parcs sont un simple chemin fermé)
+- [x] [M] **Numéro de chemin** (21/10/2026) : `way 123`, `w123`, adresse openstreetmap.org/way/123. Une seule relation parente : elle est analysée et le chemin sélectionné ; plusieurs : liste de boutons ; aucune : message (nœuds, fermé ou ouvert). Vérifié sur 1301485285 (1 relation), 805380795 (6 relations), chemin inexistant. Il reste à analyser le CONTENU d'un parc qui n'est qu'un chemin fermé (point « Contenu d'un polygone »)
 - [ ] [L] **Positions passées des nœuds** : nœuds supprimés depuis (`node/ID/history` coûte un appel par nœud) et nœuds déplacés ; les sous-relations à une date
 - [ ] [M] Fenêtre sur les modifications : nœuds membres modifiés, sous-relations, résumé par changeset
 - [ ] [M] Niveau nœuds dans l'arbre, chargé à l'ouverture d'un chemin

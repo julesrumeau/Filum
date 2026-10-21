@@ -10,15 +10,13 @@
   }
 
   // Ce que l'utilisateur a saisi : numéro, « relation 123 », « r123 » ou adresse openstreetmap.org.
-  // Renvoie { id } ou { error }.
+  // Renvoie { id } (relation), { way } (chemin) ou { error }.
   function parseRelationInput(text) {
     var t = String(text || '').trim();
-    var kind = t.match(/(?:openstreetmap\.org|osm\.org)\/(way|node)\/\d+/i);
-    if (kind) {
-      return { error: kind[1].toLowerCase() === 'way'
-        ? 'Cette adresse est celle d\'un chemin. Filum analyse une relation : indiquez le numéro d\'une relation qui le contient (la page du chemin sur openstreetmap.org les liste sous « Fait partie de »).'
-        : 'Cette adresse est celle d\'un nœud. Filum analyse une relation : indiquez le numéro d\'une relation.' };
-    }
+    var node = t.match(/(?:openstreetmap\.org|osm\.org)\/node\/\d+/i);
+    if (node) return { error: 'Cette adresse est celle d\'un nœud. Filum analyse une relation (ou un chemin) : indiquez un numéro de relation ou de chemin.' };
+    var way = t.match(/(?:openstreetmap\.org|osm\.org)\/way\/(\d+)/i) || t.match(/^(?:way|w)[\s/#]*(\d+)\b/i);
+    if (way) return { way: Number(way[1]) };
     var m = t.match(/\/relation\/(\d+)/i) || t.match(/^(?:relation|r)?[\s/#]*(\d+)$/i);
     var id = m ? Number(m[1]) : 0;
     return id > 0 ? { id: id } : { error: 'Indiquez un numéro de relation (par exemple 7444) ou l\'adresse de sa page sur openstreetmap.org.' };

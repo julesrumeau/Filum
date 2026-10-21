@@ -24,11 +24,13 @@ test('une adresse openstreetmap.org, avec suite (#map, ?, /history, barre finale
   ].forEach(t => assert.strictEqual(parseRelationInput(t).id, 2952375, t));
 });
 
-test('l\'adresse d\'un chemin ou d\'un nœud est refusée avec une explication, pas prise pour une relation', () => {
-  const w = parseRelationInput('https://www.openstreetmap.org/way/805380795');
-  assert.strictEqual(w.id, undefined);
-  assert.match(w.error, /chemin/);
-  assert.match(parseRelationInput('https://www.openstreetmap.org/node/5').error, /nœud/);
+test('l\'adresse d\'un chemin donne { way }, celle d\'un nœud est refusée avec une explication', () => {
+  assert.deepStrictEqual(parseRelationInput('https://www.openstreetmap.org/way/805380795'), { way: 805380795 });
+  assert.strictEqual(parseRelationInput('https://www.openstreetmap.org/way/805380795').id, undefined);
+  ['way 55', 'way/55', 'w55', 'W 55', 'openstreetmap.org/way/55/history'].forEach(t => assert.strictEqual(parseRelationInput(t).way, 55, t));
+  const n = parseRelationInput('https://www.openstreetmap.org/node/5');
+  assert.strictEqual(n.way, undefined);
+  assert.match(n.error, /nœud/);
 });
 
 test('texte sans numéro, vide ou numéro nul : erreur', () => {

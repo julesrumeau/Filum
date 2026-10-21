@@ -936,10 +936,47 @@
     }
   }
 
+  function parentsHtml(list) {
+    return list.map(function (r) {
+      var name = F.relationLabel(r.tags) || (r.tags.type || 'relation');
+      return '<button class="voir" data-rel="' + r.id + '">' + esc(name) + ' #' + r.id + '</button>';
+    }).join(' ');
+  }
+
+  // Un chemin comme point de départ : on cherche les relations qui le contiennent. Une seule : on l'analyse et on
+  // sélectionne le chemin. Plusieurs : on propose la liste. Aucune : on le dit.
+  async function runWay(wayId) {
+    setStatus('Recherche des relations qui contiennent le chemin ' + wayId + '...');
+    $('parents').innerHTML = ''; $('resume').textContent = '';
+    try {
+      var way = await F.fetchWay(wayId);
+      if (!way) { setStatus('Chemin ' + wayId + ' introuvable (supprimé ou numéro erroné).', true); return; }
+      var list = await F.fetchParents('way', wayId);
+      var closed = way.nodes.length > 2 && way.nodes[0] === way.nodes[way.nodes.length - 1];
+      if (list.length === 1) {
+        state.pendingSelect = 'way:' + wayId;
+        $('relation').value = String(list[0].id);
+        return run();
+      }
+      setStatus('');
+      var desc = 'Chemin ' + osmLink('way', wayId) + (way.tags && way.tags.name ? ' ' + esc(way.tags.name) : '') + ' : '
+        + way.nodes.length + ' nœuds, ' + (closed ? 'fermé' : 'ouvert') + '. ';
+      $('liste').innerHTML = ''; $('carte').innerHTML = ''; $('enquete').innerHTML = ''; $('frise-zone').innerHTML = '';
+      $('resume').innerHTML = desc + (list.length
+        ? 'Il fait partie de ' + list.length + ' relations : choisissez celle à analyser.'
+        : 'Il ne fait partie d\'aucune relation, Filum n\'a donc rien à analyser (l\'analyse du contenu d\'un parc seul n\'existe pas encore).');
+      $('parents').innerHTML = parentsHtml(list);
+    } catch (e) {
+      setStatus('Échec : ' + e.message, true);
+    }
+  }
+
   async function run() {
     var input = F.parseRelationInput($('relation').value);
     if (input.error) { setStatus(input.error, true); return; }
+    if (input.way) return runWay(input.way);
     var id = input.id;
+    $('parents').innerHTML = '';
     var prev = state.frise && state.frise.relId === id ? state.frise : null;
     if (prev && prev.loading) return;
     var token = ++state.friseToken;
@@ -957,12 +994,18 @@
       setStatus('');
       renderList();
       syncUrl();
+      F.fetchParents('relation', id).then(function (list) {
+        if (list.length && state.live && state.live.tree.id === id) {
+          $('parents').innerHTML = 'Fait partie de : ' + parentsHtml(list);
+        }
+      }).catch(function () { /* information facultative */ });
       await showMap(state.results[0]);
       if (token !== state.friseToken) return;
       var fr = await setupFrise(id, prev);
       if (token !== state.friseToken) return;
       if (fr) { applyPendingPeriod(fr); await applyPeriod(); }
       else state.pendingPeriod = null;
+      if (state.pendingSelect) { var sel = state.pendingSelect; state.pendingSelect = null; select(sel, { fromMap: true }); }
     } catch (e) {
       setStatus('Échec : ' + e.message, true);
     } finally {
@@ -971,6 +1014,12 @@
   }
 
   $('go').addEventListener('click', run);
+  $('parents').addEventListener('click', function (e) {
+    var b = e.target.closest('button[data-rel]');
+    if (!b) return;
+    $('relation').value = b.dataset.rel;
+    run();
+  });
   (function startFromUrl() {
     var q = F.readSearch(location.search);
     if (!q) return;

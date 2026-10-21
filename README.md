@@ -8,7 +8,7 @@ Projet frère de [Scopus](https://github.com/julesrumeau/Scopus), même philosop
 
 ## Utilisation
 
-Ouvrez `index.html` dans un navigateur (ou la version publiée), saisissez une relation et cliquez sur « Analyser ». Vous pouvez coller son adresse openstreetmap.org (par exemple `openstreetmap.org/relation/2952375`) ou écrire `2952375`, `relation 2952375`, `r2952375`.
+Ouvrez `index.html` dans un navigateur (ou la version publiée), saisissez une relation et cliquez sur « Analyser ». Vous pouvez coller son adresse openstreetmap.org (par exemple `openstreetmap.org/relation/2952375`) ou écrire `2952375`, `relation 2952375`, `r2952375`. Un numéro ou une adresse de **chemin** (`way 123`) marche aussi : Filum cherche les relations qui le contiennent. Sous le résumé, « Fait partie de » liste les relations parentes de celle qui est affichée.
 
 L'adresse de la page Filum garde la relation et la période analysée (`?relation=2952375&du=2026-04-01`) : copiez-la pour partager une analyse.
 
@@ -49,7 +49,7 @@ Un nœud déplacé ne casse donc rien, puisque seul compte l'identifiant. Voir �
 - **La frise ne marche que pour une relation qui contient directement des chemins**, pas pour une relation parente comme EuroVelo (saisissez le numéro d'une de ses sous-relations).
 - **La géométrie n'est pas suivie.** Déplacer un nœud, ou en ajouter ou en retirer au milieu d'un chemin, n'est pas signalé comme un changement de forme.
 - **Positions passées approximatives.** À une date passée, un ancien chemin est dessiné avec des trous là où ses nœuds ont été supprimés depuis. Les sous-relations ne sont pas reconstituées à une date.
-- **Pas encore gérés** : arrêts de bus et ordre des arrêts, schéma de transport v2, parcours de santé, nœuds membres (ils sont affichés mais pas analysés), démarrage depuis un chemin (seul un numéro de relation est accepté).
+- **Pas encore gérés** : arrêts de bus et ordre des arrêts, schéma de transport v2, parcours de santé, nœuds membres (ils sont affichés mais pas analysés), analyse d'un parc qui n'est qu'un chemin fermé sans relation.
 - **Faux positifs possibles** : un nœud où trois chemins se terminent, ou un bout posé sur le milieu d'un autre chemin, peut donner un faux bout ouvert sur un polygone.
 - **Aucun mode temps réel ni télécommande JOSM.**
 - Testé uniquement dans Chromium (en `file://` et en HTTP local). Pas testé sur téléphone.
@@ -65,7 +65,7 @@ Données © contributeurs OpenStreetMap, sous licence [ODbL](https://www.openstr
 Pas de dépendance, pas d'étape de construction : des scripts classiques, qui tiennent en `file://`.
 
 ```
-npm test        # 206 tests (node:test)
+npm test        # 209 tests (node:test)
 ```
 
 | Fichier | Rôle |
