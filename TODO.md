@@ -27,7 +27,7 @@ Taille (estimation grossière) : S = moins d'une heure, M = quelques heures, L =
 - [x] [M] **Trou sur la carte** (21/10/2026) : trait pointillé rouge entre les deux bouts libres les plus proches (les ronds existaient déjà). Le trait n'est pas cliquable (il gênerait les chemins), seulement surligné quand le trou est sélectionné
 - [x] [S] **Zoom sur le chemin sélectionné** dans la liste (21/10/2026, `fit` dans `setupZoom`) : cadre le chemin avec de la marge, jamais plus de 60 fois. Pas d'animation
 - [x] [M] **Fond de carte** (21/10/2026, `src/tuiles.js`) : bouton carré dans les commandes de zoom, tuiles tile.openstreetmap.org (zoom choisi pour 256 px, 40 tuiles au plus, ajoutées et retirées au déplacement), attribution affichée. Le tracé est passé en projection Web Mercator pour s'aligner sur les tuiles (avant : équirectangulaire corrigée par le cosinus). Vérifié sur 274225 : le polygone suit le parc et le plan d'eau, 9 tuiles en 200, aucune erreur ; en file:// les tuiles se chargent sans Referer. À surveiller : la politique d'usage des tuiles OSM (usage léger) si le site est très visité ; pas de fond sur les relations immenses (EuroVelo) non testé
-- [ ] [S] Zones de clic imprécises quand deux chemins sont très proches (le dernier dessiné gagne)
+- [x] [S] **Zones de clic** (21/10/2026, `pickAt`) : une pastille d'abord, sinon parmi les chemins qui se recouvrent sous le doigt, le plus proche du point (distance au segment). Mesuré sur 2952375 zoomé : 61 clics sur 80 au milieu d'un chemin choisissent le bon (contre 1 sur 80 avant) ; les autres tombent sur un nœud commun à deux chemins, où le choix reste ambigu
 
 ## P2. Fonctionnalités demandées qui élargissent l'outil
 

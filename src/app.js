@@ -737,6 +737,14 @@
     });
   }
 
+  // Distance d'un point à un segment (mêmes unités que les coordonnées du dessin).
+  function segDist(p, a, b) {
+    var dx = b.x - a.x, dy = b.y - a.y, len2 = dx * dx + dy * dy;
+    var t = len2 ? Math.max(0, Math.min(1, ((p.x - a.x) * dx + (p.y - a.y) * dy) / len2)) : 0;
+    var cx = a.x + t * dx, cy = a.y + t * dy;
+    return Math.sqrt((p.x - cx) * (p.x - cx) + (p.y - cy) * (p.y - cy));
+  }
+
   function setupZoom(box, full) {
     var svg = box.querySelector('svg'), view = full, drag = null, moved = 0;
     function apply() {
@@ -781,10 +789,26 @@
       var wasClick = drag && moved < 4;
       stop();
       if (!wasClick) return;
-      var el = document.elementFromPoint(e.clientX, e.clientY);
-      var hit = el && el.closest('[data-sel]');
+      var hit = pickAt(e.clientX, e.clientY);
       select(hit ? hit.getAttribute('data-sel') : null, { fromMap: true });
     });
+    // Sous le doigt : une pastille d'abord, sinon, parmi les chemins qui se recouvrent, le plus proche du point.
+    function pickAt(clientX, clientY) {
+      var under = document.elementsFromPoint(clientX, clientY).filter(function (el) { return el.closest && el.closest('[data-sel]'); });
+      var dot = under.filter(function (el) { return el.tagName === 'circle'; })[0];
+      if (dot) return dot;
+      var lines = under.filter(function (el) { return el.tagName === 'polyline'; });
+      if (lines.length < 2) return under[0] ? under[0].closest('[data-sel]') : null;
+      var pt = toDrawing(clientX, clientY), best = null, bestD = Infinity;
+      lines.forEach(function (el) {
+        var q = el.getAttribute('points').split(' ').map(function (s2) { var c = s2.split(','); return { x: Number(c[0]), y: Number(c[1]) }; });
+        for (var i = 1; i < q.length; i++) {
+          var d = segDist(pt, q[i - 1], q[i]);
+          if (d < bestD) { bestD = d; best = el; }
+        }
+      });
+      return best;
+    }
     svg.addEventListener('pointercancel', stop);
     box.querySelector('.zoom').addEventListener('click', function (e) {
       var b = e.target.closest('button');
