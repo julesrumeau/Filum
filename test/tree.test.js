@@ -356,3 +356,35 @@ test('buildTree : what prend le premier tag parlant (public_transport avant tour
     R(100, [m('node', 50), m('node', 51)])] }, 100);
   assert.deepStrictEqual(t.children.map(c => c.what), ['public_transport=platform', null]);
 });
+
+const { pieceByWay, holeSummary } = require('../src/tree.js');
+
+test('pieceByWay : numéro de morceau de chaque chemin, seulement pour les relations coupées en plusieurs morceaux', () => {
+  const snap = { elements: [
+    W(1, [10, 11]), W(2, [11, 12]), W(3, [30, 31]), W(4, [40, 41]), W(5, [41, 42]),
+    R(200, [m('way', 1), m('way', 2), m('way', 3)]), R(201, [m('way', 4), m('way', 5)]),
+  ] };
+  const results = [
+    { relationId: 200, isPolygon: false, pieces: [[0, 1], [2]] },
+    { relationId: 201, isPolygon: false, pieces: [[0, 1]] },
+  ];
+  assert.deepStrictEqual(pieceByWay(snap, results), { 1: 0, 2: 0, 3: 1 });
+});
+
+test('pieceByWay : un polygone n\'est pas coloré par morceaux, un chemin présent deux fois garde sa première valeur', () => {
+  const snap = { elements: [W(1, [1, 2]), W(2, [5, 6]), R(10, [m('way', 1), m('way', 2)]), R(11, [m('way', 2), m('way', 1)])] };
+  const poly = [{ relationId: 10, isPolygon: true, pieces: [[0], [1]] }];
+  assert.deepStrictEqual(pieceByWay(snap, poly), {});
+  const two = [{ relationId: 10, isPolygon: false, pieces: [[0], [1]] }, { relationId: 11, isPolygon: false, pieces: [[0, 1]] }];
+  assert.deepStrictEqual(pieceByWay(snap, two), { 1: 0, 2: 1 });
+});
+
+test('holeSummary : relations avec trou, nombre de trous et de morceaux, les plus cassées d\'abord', () => {
+  const rels = [
+    { relationId: 1, name: 'A', gaps: [1], openEnds: [], missing: [], pieces: [[0], [1]], isPolygon: false },
+    { relationId: 2, name: null, gaps: [1, 2, 3], openEnds: [], missing: [], pieces: [[0], [1], [2], [3]], isPolygon: false },
+    { relationId: 3, name: 'C', gaps: [], openEnds: [], missing: [], pieces: [[0]], isPolygon: false },
+    { relationId: 4, name: 'P', gaps: [], openEnds: [7, 8], missing: [], pieces: [[0]], isPolygon: true },
+  ];
+  assert.deepStrictEqual(holeSummary(rels).map(h => [h.relationId, h.count]), [[2, 3], [4, 2], [1, 1]]);
+});

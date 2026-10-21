@@ -173,6 +173,31 @@
       lat: n ? n.lat : undefined, lon: n ? n.lon : undefined, children: [] };
   }
 
+  // Pour chaque chemin, le numéro de son morceau dans la relation qui le contient : permet de colorer les morceaux
+  // séparés par un trou. Seules les relations en plusieurs morceaux (hors polygones) comptent ; première occurrence gagnante.
+  function pieceByWay(snapshot, results) {
+    var rels = {}, out = {};
+    snapshot.elements.forEach(function (e) { if (e.type === 'relation') rels[e.id] = e; });
+    results.forEach(function (r) {
+      if (r.isPolygon || r.pieces.length < 2 || !rels[r.relationId]) return;
+      r.pieces.forEach(function (piece, k) {
+        piece.forEach(function (memberIndex) {
+          var mb = rels[r.relationId].members[memberIndex];
+          if (mb && mb.type === 'way' && out[mb.ref] === undefined) out[mb.ref] = k;
+        });
+      });
+    });
+    return out;
+  }
+
+  // Relations avec un trou (ou un bout ouvert, ou un membre manquant), les plus cassées d'abord.
+  function holeSummary(results) {
+    return results.map(function (r) {
+      return { relationId: r.relationId, name: r.name, count: r.gaps.length + r.openEnds.length + r.missing.length, pieces: r.pieces.length };
+    }).filter(function (h) { return h.count > 0; })
+      .sort(function (a, b) { return b.count - a.count || a.relationId - b.relationId; });
+  }
+
   // Libellé d'une relation : name (avec ref entre parenthèses), sinon départ → étapes → arrivée, sinon ref.
   function relationLabel(tags) {
     var t = tags || {};
@@ -201,7 +226,7 @@
     return out;
   }
 
-  var api = { relationLabel: relationLabel, groupQuiet: groupQuiet, windowTree: windowTree, buildTree: buildTree, wayRefsOf: wayRefsOf, findPath: findPath };
+  var api = { pieceByWay: pieceByWay, holeSummary: holeSummary, relationLabel: relationLabel, groupQuiet: groupQuiet, windowTree: windowTree, buildTree: buildTree, wayRefsOf: wayRefsOf, findPath: findPath };
   if (isNode) module.exports = api;
   else root.Filum = Object.assign(root.Filum || {}, api);
 })(typeof self !== 'undefined' ? self : this);

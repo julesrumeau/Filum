@@ -210,6 +210,14 @@
       + holes + ' avec un trou, ' + orders + ' avec seulement un avertissement (ordre, variante isolée).';
     state.index = [];
     $('liste').innerHTML = nodeHtml(state.tree, true);
+    var sums = F.holeSummary(state.results);
+    $('trous').innerHTML = state.results.length > 1 && sums.length
+      ? 'Où sont les trous : ' + sums.slice(0, 12).map(function (h) {
+        var r = state.results.filter(function (x) { return x.relationId === h.relationId; })[0];
+        return '<button class="voir" data-trou="' + h.relationId + '">' + esc(F.relationLabel({ name: h.name }) || 'relation') + ' #' + h.relationId
+          + ' : ' + h.count + (r && r.isPolygon ? ' bout(s) ouvert(s)' : ' trou(s)') + '</button>';
+      }).join(' ') + (sums.length > 12 ? ' et ' + (sums.length - 12) + ' autre(s)' : '')
+      : '';
   }
 
   function visibleWayRefs(relId) {
@@ -677,6 +685,11 @@
     var nodes = state.nodes, ways = {};
     state.snapshot.elements.forEach(function (e) { if (e.type === 'way') ways[e.id] = e; });
     var lines = [], pts = [];
+    var pieces = {};
+    if (!state.window) {
+      var inRel = subtreeIds(result.relationId);
+      pieces = F.pieceByWay(state.snapshot, state.results.filter(function (r) { return inRel[r.relationId]; }));
+    }
     visibleWayRefs(result.relationId).forEach(function (ref) {
       if (!ways[ref]) return;
       var p = ways[ref].nodes.map(function (n) { return nodes[n]; }).filter(function (n) { return n && typeof n.lat === 'number'; });
@@ -703,7 +716,7 @@
       var pts2 = l.pts.map(function (q) { return X(q) + ',' + Y(q); }).join(' ');
       svg += '<polyline class="touche" fill="none" stroke="transparent" stroke-width="14" vector-effect="non-scaling-stroke" '
         + 'data-sel="way:' + l.id + '" points="' + pts2 + '"/>'
-        + '<polyline class="voie ' + (l.action || '') + '" fill="none" stroke="var(--trace)" stroke-width="2" vector-effect="non-scaling-stroke" '
+        + '<polyline class="voie ' + (l.action || '') + (pieces[l.id] !== undefined ? ' p' + (pieces[l.id] % 6) : '') + '" fill="none" stroke="var(--trace)" stroke-width="2" vector-effect="non-scaling-stroke" '
         + 'data-way="' + l.id + '" points="' + pts2 + '"/>';
     });
     // Trait pointillé entre les deux bouts libres les plus proches du trou
@@ -1005,7 +1018,7 @@
   // sélectionne le chemin. Plusieurs : on propose la liste. Aucune : on le dit.
   async function runWay(wayId) {
     setStatus('Recherche des relations qui contiennent le chemin ' + wayId + '...');
-    $('parents').innerHTML = ''; $('resume').textContent = '';
+    $('parents').innerHTML = ''; $('trous').innerHTML = ''; $('resume').textContent = '';
     try {
       var way = await F.fetchWay(wayId);
       if (!way) { setStatus('Chemin ' + wayId + ' introuvable (supprimé ou numéro erroné).', true); return; }
@@ -1034,7 +1047,7 @@
     if (input.error) { setStatus(input.error, true); return; }
     if (input.way) return runWay(input.way);
     var id = input.id;
-    $('parents').innerHTML = '';
+    $('parents').innerHTML = ''; $('trous').innerHTML = '';
     var prev = state.frise && state.frise.relId === id ? state.frise : null;
     if (prev && prev.loading) return;
     var token = ++state.friseToken;
@@ -1074,6 +1087,15 @@
   }
 
   $('go').addEventListener('click', run);
+  $('trous').addEventListener('click', function (e) {
+    var b = e.target.closest('button[data-trou]');
+    if (!b) return;
+    var r = state.results.filter(function (x) { return x.relationId === Number(b.dataset.trou); })[0];
+    var sel = r && (r.gaps.length ? 'gap:' + r.relationId + ':0' : r.openEnds.length ? 'open:' + r.relationId + ':0' : null);
+    if (!sel) return;
+    select(sel, { fromMap: false });
+    if (r.gaps.length) revealInTree(sel);
+  });
   $('parents').addEventListener('click', function (e) {
     var b = e.target.closest('button[data-rel]');
     if (!b) return;

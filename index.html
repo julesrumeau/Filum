@@ -49,6 +49,7 @@
   .ev-deleted, .ev-removed-from-relation { border-left-color:var(--alerte); } .ev-added-to-relation { border-left-color:var(--trace); }
   svg .voie.created { stroke:var(--bon); } svg .voie.modified { stroke:var(--avert); } svg .voie.added-to-relation { stroke:var(--trace); }
   svg .trait-trou.sel { stroke:var(--selection); stroke-width:3; }
+  svg .voie.p0 { stroke:#2b6cb0; } svg .voie.p1 { stroke:#0b8a8a; } svg .voie.p2 { stroke:#a0522d; } svg .voie.p3 { stroke:#6b7d1f; } svg .voie.p4 { stroke:#c2185b; } svg .voie.p5 { stroke:#455a64; }
   svg .voie.sel { stroke:var(--selection); }
   .charge { margin:6px 0; } .charge progress { width:140px; vertical-align:middle; }
   .note { display:block; margin:2px 0 2px 16px; padding:2px 8px; border-left:3px solid var(--avert); background:var(--surligne); font-size:.8125rem; border-radius:0 4px 4px 0; }
@@ -86,6 +87,7 @@
     <div class="gauche">
       <p id="resume"></p>
       <p id="parents" class="detail"></p>
+      <p id="trous" class="detail"></p>
       <div id="stats" class="detail"></div>
       <div id="liste"></div>
       <section id="enquete"></section>
