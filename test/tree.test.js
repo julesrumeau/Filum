@@ -300,3 +300,20 @@ test('la ligne d\'ordre garde touching (raccord en T ou saut dans la liste)', ()
   const t = buildTree({ elements: [W(1, [10, 11, 12]), W(2, [11, 20]), R(100, [m('way', 1), m('way', 2)])] }, 100);
   assert.strictEqual(t.children.find(c => c.kind === 'order').touching, true);
 });
+
+const { groupQuiet } = require('../src/tree.js');
+
+test('groupQuiet : une suite de chemins sans problème est regroupée, les chemins aux bords d\'un trou et les trous restent visibles', () => {
+  const way = (id, extra) => Object.assign({ kind: 'way', id, children: [] }, extra);
+  const kids = [way(1), way(2), way(3), way(4, { border: true }), { kind: 'gap', children: [] }, way(5, { border: true }), way(6), way(7), way(8), way(9)];
+  const g = groupQuiet(kids, 3);
+  assert.deepStrictEqual(g.map(x => x.quiet ? 'Q' + x.items.length : x.kind + (x.id || '')), ['Q3', 'way4', 'gap', 'way5', 'Q4']);
+});
+
+test('groupQuiet : une suite trop courte reste telle quelle, une note ou un chemin absent ne sont pas « sans problème »', () => {
+  const way = (id, extra) => Object.assign({ kind: 'way', id, children: [] }, extra);
+  const kids = [way(1), way(2), way(3, { notes: [{ key: 'note', value: 'x' }] }), way(4), way(5, { missing: true }), way(6)];
+  const g = groupQuiet(kids, 3);
+  assert.strictEqual(g.length, 6);
+  assert.ok(g.every(x => !x.quiet));
+});

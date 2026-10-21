@@ -20,7 +20,7 @@
   button.go:disabled { opacity:.5; }
   #status.erreur, .erreur { color:var(--alerte); } #status { min-height:1.5em; margin:8px 0; }
   #liste { margin:8px 0; max-height:calc(100vh - 380px); min-height:160px; overflow:auto; border:1px solid var(--bord); border-radius:6px; padding:4px 8px; }
-  #liste details { margin-left:0; } #liste .enfants { margin-left:18px; border-left:1px solid var(--bord); padding-left:8px; }
+  #liste details { margin-left:0; } #liste details.plie { margin:2px 0; } #liste details.plie > summary { cursor:pointer; } #liste .enfants { margin-left:18px; border-left:1px solid var(--bord); padding-left:8px; }
   #liste summary { cursor:pointer; padding:3px 0; } .feuille { padding:2px 0 2px 14px; font-size:.9rem; }
   .detail { color:var(--doux); font-size:.8125rem; } .role { background:var(--bord); border-radius:4px; padding:0 6px; margin-left:6px; font-size:.75rem; }
   .pastille { display:inline-block; width:10px; height:10px; border-radius:50%; margin-right:6px; background:var(--bord); }
@@ -70,7 +70,7 @@
   <h1>Filum</h1>
   <p class="sous">Détecte les discontinuités d'une relation OpenStreetMap.</p>
   <div class="ligne">
-    <input id="relation" type="text" inputmode="numeric" placeholder="Identifiant de relation (ex. 7444, 12586521)" aria-label="Identifiant de relation">
+    <input id="relation" type="text" placeholder="Numéro ou adresse de relation (ex. 7444, r12586521, openstreetmap.org/relation/…)" aria-label="Numéro ou adresse de la relation">
     <button id="go" class="go">Analyser</button>
   </div>
   <div id="status" role="status"></div>
@@ -85,6 +85,7 @@
   </div>
 </main>
 <script src="src/continuity.js"></script>
+<script src="src/input.js"></script>
 <script src="src/osmapi.js"></script>
 <script src="src/viewport.js"></script>
 <script src="src/forensic.js"></script>

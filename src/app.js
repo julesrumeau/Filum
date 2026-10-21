@@ -16,11 +16,6 @@
     el.className = isError ? 'erreur' : '';
   }
 
-  function parseRelationId(text) {
-    var m = String(text).match(/(\d+)\s*\/?\s*$/);
-    return m ? Number(m[1]) : null;
-  }
-
   function isHole(r) { return r.gaps.length || r.missing.length || r.openEnds.length; }
   function isWarning(r) { return r.orderIssues.length || r.detached.length; }
 
@@ -150,14 +145,24 @@
     var key = state.index.length;
     state.index.push(n);
     return '<details data-key="' + key + '"' + (open ? ' open' : '') + '><summary>' + rowHtml(n) + '</summary>' + eventsHtml(n)
-      + '<div class="enfants">' + (open ? n.children.map(function (c) { return nodeHtml(c, false); }).join('') : '') + '</div></details>';
+      + '<div class="enfants">' + (open ? childrenHtml(n) : '') + '</div></details>';
+  }
+
+  // Les chemins sans rien à signaler sont repliés par suites de 3 ou plus, sauf dans la fenêtre sur une période.
+  function childrenHtml(n) {
+    var items = state.window ? n.children : F.groupQuiet(n.children, 3);
+    return items.map(function (c) {
+      if (!c.quiet) return nodeHtml(c, false);
+      return '<details class="plie"><summary class="detail">' + c.items.length + ' chemin(s) sans problème</summary>'
+        + c.items.map(function (x) { return nodeHtml(x, false); }).join('') + '</details>';
+    }).join('');
   }
 
   // Les enfants d'une relation ne sont dessinés que quand on l'ouvre.
   function fillChildren(details) {
     var box = details.querySelector(':scope > .enfants');
     if (box.firstChild) return;
-    box.innerHTML = state.index[Number(details.dataset.key)].children.map(function (c) { return nodeHtml(c, false); }).join('');
+    box.innerHTML = childrenHtml(state.index[Number(details.dataset.key)]);
   }
 
   function renderList() {
@@ -258,6 +263,29 @@
   // ---- Frise : deux curseurs, début et fin de la période étudiée, sous la recherche ----
   function nowIso() { return new Date().toISOString().replace(/\.\d+Z$/, 'Z'); }
   function isFull(fr) { return fr.from === fr.min && fr.to === fr.max; }
+
+  // Adresse partageable : relation et période analysée (sans effet si le navigateur refuse, par exemple en file://).
+  function syncUrl() {
+    var id = state.live && state.live.tree && state.live.tree.id;
+    if (!id) return;
+    var fr = state.frise, a = fr && fr.relId === id && fr.applied;
+    var from = a && a.from !== fr.min ? a.from : null, to = a && a.to !== fr.max ? a.to : null;
+    try { history.replaceState(null, '', F.buildSearch(id, from, to)); } catch (e) { /* adresse non modifiable */ }
+  }
+
+  // Période demandée par l'adresse (?du=&au=), appliquée une seule fois à la frise créée.
+  function applyPendingPeriod(fr) {
+    var p = state.pendingPeriod;
+    state.pendingPeriod = null;
+    if (!p || !fr) return;
+    if (p.from && p.from + 'T00:00:00Z' > fr.min) fr.from = p.from + 'T00:00:00Z';
+    if (p.to) {
+      var to = p.to + 'T23:59:59Z';
+      if (to < fr.max) { fr.to = to; fr.toIsMax = false; }
+    }
+    if (fr.from > fr.to) { fr.from = fr.min; fr.to = fr.max; fr.toIsMax = true; }
+    buildFrise();
+  }
 
   async function setupFrise(id, prev) {
     var zone = $('frise-zone');
@@ -423,6 +451,7 @@
     var fr = state.frise;
     if (!fr) return;
     fr.applied = { from: fr.from, to: fr.to };
+    syncUrl();
     paintFrise();
     $('enquete').innerHTML = '<div id="enquete-res"></div>';
     var out = $('enquete-res');
@@ -713,7 +742,10 @@
       fillChildren(d);
     }
     var rows = $('liste').querySelectorAll('[data-sel="' + sel + '"]');
-    Array.prototype.forEach.call(rows, function (el) { el.classList.add('selection'); });
+    Array.prototype.forEach.call(rows, function (el) {
+      el.classList.add('selection');
+      for (var g = el.closest('details.plie'); g; g = g.parentElement && g.parentElement.closest('details.plie')) g.open = true;
+    });
     if (rows.length) rows[0].scrollIntoView({ block: 'center', behavior: 'smooth' });
   }
 
@@ -731,8 +763,9 @@
   }
 
   async function run() {
-    var id = parseRelationId($('relation').value);
-    if (!id) { setStatus('Indiquez un identifiant de relation (par exemple 7444).', true); return; }
+    var input = F.parseRelationInput($('relation').value);
+    if (input.error) { setStatus(input.error, true); return; }
+    var id = input.id;
     var prev = state.frise && state.frise.relId === id ? state.frise : null;
     if (prev && prev.loading) return;
     var token = ++state.friseToken;
@@ -749,11 +782,13 @@
       if (!state.results.length) throw new Error('Relation ' + id + ' introuvable.');
       setStatus('');
       renderList();
+      syncUrl();
       await showMap(state.results[0]);
       if (token !== state.friseToken) return;
       var fr = await setupFrise(id, prev);
       if (token !== state.friseToken) return;
-      if (fr) await applyPeriod();
+      if (fr) { applyPendingPeriod(fr); await applyPeriod(); }
+      else state.pendingPeriod = null;
     } catch (e) {
       setStatus('Échec : ' + e.message, true);
     } finally {
@@ -762,6 +797,13 @@
   }
 
   $('go').addEventListener('click', run);
+  (function startFromUrl() {
+    var q = F.readSearch(location.search);
+    if (!q) return;
+    $('relation').value = String(q.id);
+    state.pendingPeriod = q.from || q.to ? { from: q.from, to: q.to } : null;
+    run();
+  })();
   $('relation').addEventListener('keydown', function (e) { if (e.key === 'Enter') run(); });
   $('liste').addEventListener('click', function (e) {
     if (!e.target.closest('a, button')) {
@@ -779,6 +821,6 @@
     if (el) select(el.getAttribute('data-sel'), { fromMap: true });
   });
   $('liste').addEventListener('toggle', function (e) {
-    if (e.target.open && e.target.tagName === 'DETAILS') fillChildren(e.target);
+    if (e.target.open && e.target.tagName === 'DETAILS' && e.target.dataset.key !== undefined) fillChildren(e.target);
   }, true);
 })();

@@ -8,7 +8,9 @@ Projet frère de [Scopus](https://github.com/julesrumeau/Scopus), même philosop
 
 ## Utilisation
 
-Ouvrez `index.html` dans un navigateur (ou la version publiée), saisissez le numéro d'une relation et cliquez sur « Analyser ». Le numéro est celui de la page de la relation sur openstreetmap.org (par exemple `openstreetmap.org/relation/2952375`).
+Ouvrez `index.html` dans un navigateur (ou la version publiée), saisissez une relation et cliquez sur « Analyser ». Vous pouvez coller son adresse openstreetmap.org (par exemple `openstreetmap.org/relation/2952375`) ou écrire `2952375`, `relation 2952375`, `r2952375`.
+
+L'adresse de la page Filum garde la relation et la période analysée (`?relation=2952375&du=2026-04-01`) : copiez-la pour partager une analyse.
 
 Quelques relations pour essayer :
 
@@ -21,7 +23,7 @@ Quelques relations pour essayer :
 
 ### Ce que vous voyez
 
-- **L'arbre** : la relation, ses sous-relations, ses chemins, avec pour chacun la version, l'auteur et la date. Les trous (rouge) et les problèmes d'ordre (orange) sont des lignes à leur place exacte dans la liste.
+- **L'arbre** : la relation, ses sous-relations, ses chemins, avec pour chacun la version, l'auteur et la date. Les suites de chemins sans problème sont repliées (« 40 chemin(s) sans problème »), seuls les trous et leurs abords restent visibles. Les trous (rouge) et les problèmes d'ordre (orange) sont des lignes à leur place exacte dans la liste.
 - **La carte** : le tracé, sans fond de carte. Les points rouges sont les extrémités qui ne se raccordent pas. Molette pour zoomer, glisser pour se déplacer.
 - **La sélection** : un clic sur un chemin ou un trou, dans l'arbre ou sur la carte, le met en surbrillance partout.
 - **La frise** (sous la recherche) : deux curseurs, début et fin de la période. La barre rouge montre les périodes où la relation était cassée, sur toute son histoire. Après avoir déplacé les curseurs, cliquez sur « Analyser » : l'historique des chemins est lu (environ 30 secondes pour 1 000 chemins, avec une barre de progression et une pause), puis la page montre ce qui a été créé, modifié, ajouté, retiré ou supprimé dans la période, avec l'auteur, la date et le changeset. Ce qui n'a pas bougé dans la période n'apparaît pas. Pour tout voir, gardez la période complète.
@@ -63,7 +65,7 @@ Données © contributeurs OpenStreetMap, sous licence [ODbL](https://www.openstr
 Pas de dépendance, pas d'étape de construction : des scripts classiques, qui tiennent en `file://`.
 
 ```
-npm test        # 166 tests (node:test)
+npm test        # 192 tests (node:test)
 ```
 
 | Fichier | Rôle |
@@ -74,6 +76,7 @@ npm test        # 166 tests (node:test)
 | `src/changes.js` | Ce qui change dans une période (créé, modifié, ajouté, retiré, supprimé) |
 | `src/tree.js` | Arbre des relations, fenêtre sur une période |
 | `src/frise.js`, `src/viewport.js` | Échelle de dates, zoom |
+| `src/input.js` | Saisie (numéro, adresse) et paramètres d'adresse |
 | `src/app.js`, `index.html` | Interface |
 
 La logique est pure et testée d'abord (tests écrits avant le code). `CLAUDE.md` contient les décisions, les mesures et les pièges rencontrés ; `TODO.md`, ce qui reste à faire.

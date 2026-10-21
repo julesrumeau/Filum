@@ -16,9 +16,9 @@ Taille (estimation grossière) : S = moins d'une heure, M = quelques heures, L =
 
 ## P1. Lisibilité, saisie et confiance (retours demandés, rapides, très visibles)
 
-- [ ] [S] Liste des membres **repliée par défaut**, ou dépliée là où la relation est cassée (bibi, pyrog) ; sous-listes comme FacilMap
-- [ ] [S] **Saisie** : coller une URL openstreetmap.org, accepter `relation 123` et `r123`
-- [ ] [M] Mettre les **paramètres de l'analyse dans l'URL** pour la partager
+- [x] [S] Liste des membres **repliée** (21/10/2026) : les suites de 3 chemins ou plus sans rien à signaler sont dans un bloc replié « N chemin(s) sans problème », les trous, lignes d'ordre et chemins au bord d'un trou restent visibles (2952375 : 47 lignes au lieu de 1 022). Un clic sur la carte ouvre le bloc qui contient le chemin. Pas appliqué dans la fenêtre sur une période
+- [x] [S] **Saisie** (21/10/2026, `src/input.js`) : adresse openstreetmap.org (avec #map, /history...), `relation 123`, `r123`, `#123`. L'adresse d'un chemin ou d'un nœud donne une explication au lieu d'être prise pour une relation
+- [x] [M] **Paramètres dans l'adresse** (21/10/2026) : `?relation=ID&du=AAAA-MM-JJ&au=AAAA-MM-JJ`, mis à jour à chaque analyse (sans effet si le navigateur refuse), relus au démarrage, la période déclenche la lecture de l'historique. Vérifié en file://
 - [ ] [S] **Légende de la frise** confuse pour une relation à une seule version
 - [ ] [S] **Libellé d'une relation** : `from`, `via`, `to`, `ref`, `stage`, nom de la relation parente. [M] puis le symbole `osmc:symbol` en graphique
 - [ ] [M] **Preuve avant/après** sous chaque modification de l'enquête (nœuds retirés et ajoutés, extrémités, liens complets en https://www.openstreetmap.org/...) pour que chacun contrôle sans aller sur osm.org

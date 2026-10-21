@@ -162,7 +162,24 @@
     }) });
   }
 
-  var api = { windowTree: windowTree, buildTree: buildTree, wayRefsOf: wayRefsOf, findPath: findPath };
+  // Regroupe les suites d'au moins `minRun` chemins sans rien à signaler (ni bord de trou, ni note, ni absent,
+  // ni événement) en { quiet: true, items }. Les trous, lignes d'ordre et chemins à examiner restent visibles.
+  function groupQuiet(children, minRun) {
+    function isQuiet(c) {
+      return c.kind === 'way' && !c.border && !c.missing && !c.removed && !(c.notes && c.notes.length) && !(c.events && c.events.length);
+    }
+    var out = [], run = [];
+    function flush() {
+      if (run.length >= minRun) out.push({ quiet: true, items: run });
+      else run.forEach(function (c) { out.push(c); });
+      run = [];
+    }
+    children.forEach(function (c) { if (isQuiet(c)) run.push(c); else { flush(); out.push(c); } });
+    flush();
+    return out;
+  }
+
+  var api = { groupQuiet: groupQuiet, windowTree: windowTree, buildTree: buildTree, wayRefsOf: wayRefsOf, findPath: findPath };
   if (isNode) module.exports = api;
   else root.Filum = Object.assign(root.Filum || {}, api);
 })(typeof self !== 'undefined' ? self : this);
