@@ -164,3 +164,35 @@ test('période qui commence avant la création de la relation : aucun chemin « 
   const ev = windowChanges(ctx0(), 100, T('2010-01-01'), T('2011-01-01'));
   assert.deepStrictEqual(ev, []);
 });
+
+const { impactDates, filterMinor } = require('../src/changes.js');
+
+test('impactDates : les dates où les trous ou les morceaux changent', () => {
+  const pts = [
+    { date: 'D1', pieces: 1, gaps: 0, broken: false },
+    { date: 'D2', pieces: 1, gaps: 0, broken: false },
+    { date: 'D3', pieces: 2, gaps: 1, broken: true },
+    { date: 'D4', pieces: 2, gaps: 1, broken: true },
+    { date: 'D5', pieces: 1, gaps: 0, broken: false },
+  ];
+  assert.deepStrictEqual(impactDates(pts), { D3: true, D5: true });
+  assert.deepStrictEqual(impactDates([]), {});
+  assert.deepStrictEqual(impactDates(null), {});
+});
+
+test('filterMinor : on garde ce qui touche l\'appartenance, les extrémités ou la continuité ; on retire géométrie intérieure et tags', () => {
+  const ev = (kind, id, action, date, extra) => Object.assign({ kind, id, action, date }, extra);
+  const events = [
+    ev('way', 1, 'created', 'D1'),
+    ev('way', 2, 'modified', 'D2', { nodes: { added: [5], removed: [], endsChanged: false }, tags: [] }),          // intérieur : mineur
+    ev('way', 3, 'modified', 'D2', { nodes: { added: [], removed: [], endsChanged: false }, tags: [{ key: 'name' }] }), // tags : mineur
+    ev('way', 4, 'modified', 'D2', { nodes: { added: [], removed: [9], endsChanged: true }, tags: [] }),           // extrémités : gardé
+    ev('way', 5, 'modified', 'D3', { nodes: { added: [], removed: [8], endsChanged: false }, tags: [] }),          // date d'impact : gardé
+    ev('way', 6, 'removed-from-relation', 'D2'),
+    ev('relation', 100, 'modified', 'D2', { members: { added: 0, removed: 0 }, tags: [{ key: 'note' }] }),         // tags seuls : mineur
+    ev('relation', 100, 'modified', 'D2', { members: { added: 1, removed: 0 }, tags: [] }),                         // membres : gardé
+  ];
+  const kept = filterMinor(events, { D3: true });
+  assert.deepStrictEqual(kept.map(e => e.kind + e.id + e.action[0]), ['way1c', 'way4m', 'way5m', 'way6r', 'relation100m']);
+  assert.strictEqual(kept[4].members.added, 1);
+});

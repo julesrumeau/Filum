@@ -387,7 +387,10 @@
       + '<input type="range" id="cur-d" min="0" max="1000" aria-label="Fin de la période"></div>'
       + '<div class="frise-dates"><span id="date-g"></span><span id="date-d"></span></div>'
       + '<div id="frise-legende" class="detail"></div><div id="frise-aide" class="aide"></div>'
-      + '<div id="charge" class="charge"></div><div id="frise-note" class="detail"></div>';
+      + '<div id="charge" class="charge"></div>'
+      + '<label class="detail mineurs"><input type="checkbox" id="mineurs"' + (state.hideMinor ? ' checked' : '')
+      + '> Masquer les modifications sans effet sur la continuité (tags, nœuds ajoutés ou retirés à l\'intérieur d\'un chemin)</label>'
+      + '<div id="frise-note" class="detail"></div>';
     $('cur-g').value = Math.round(F.toFraction(fr.from, fr.min, fr.max) * 1000);
     $('cur-d').value = fr.toIsMax ? 1000 : Math.round(F.toFraction(fr.to, fr.min, fr.max) * 1000);
     function onMove(side) {
@@ -400,6 +403,10 @@
       paintFrise();
     }
     setupFriseHover(fr);
+    $('mineurs').addEventListener('change', function () {
+      state.hideMinor = $('mineurs').checked;
+      if (fr.applied && fr.ctx && fr.points && !isFull(fr) && state.frise === fr) showWindow(fr);
+    });
     $('cur-g').addEventListener('input', function () { onMove('g'); });
     $('cur-d').addEventListener('input', function () { onMove('d'); });
     $('charge').addEventListener('click', function (e) {
@@ -551,7 +558,12 @@
   }
 
   async function showWindow(fr) {
-    var events = F.windowChanges(fr.ctx, fr.relId, fr.from, fr.to), snap, results, tree;
+    var events = F.windowChanges(fr.ctx, fr.relId, fr.from, fr.to), snap, results, tree, minor = 0;
+    if (state.hideMinor && fr.points) {
+      var kept = F.filterMinor(events, F.impactDates(fr.points));
+      minor = events.length - kept.length;
+      events = kept;
+    }
     if (fr.toIsMax) { snap = state.live.snapshot; results = state.live.results; tree = state.live.tree; }
     else {
       snap = F.stateAt(fr.to, fr.ctx, fr.relId);
@@ -565,7 +577,8 @@
     var r = results.filter(function (x) { return x.relationId === fr.relId; })[0];
     var shownCount = wtree.children.filter(function (c) { return c.kind !== 'gap' && c.kind !== 'order'; }).length;
     $('resume').textContent = 'Période du ' + fmtDate(fr.from) + ' au ' + (fr.toIsMax ? 'aujourd\'hui' : fmtDate(fr.to)) + ' : '
-      + shownCount + ' élément(s) touché(s) affiché(s), ' + wtree.hiddenCount + ' masqué(s) (non modifiés dans la période). '
+      + shownCount + ' élément(s) touché(s) affiché(s), ' + wtree.hiddenCount + ' masqué(s) (non modifiés dans la période'
+      + (minor ? ' ou seulement ' + minor + ' modification(s) sans effet sur la continuité' : '') + '). '
       + 'État à la date de fin, relation complète : ' + (r ? r.gaps.length + ' trou(s), ' + r.pieces.length + ' morceau(x)' : 'inconnu') + '.';
     var pending = F.wayIdsToLoad(fr.ctx, fr.max).length;
     $('frise-note').className = pending ? 'erreur' : 'detail';

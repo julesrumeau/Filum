@@ -106,7 +106,29 @@
     return events.sort(function (a, b) { return a.date < b.date ? -1 : a.date > b.date ? 1 : 0; });
   }
 
-  var api = { windowChanges: windowChanges, diffNodes: diffNodes, diffTags: diffTags, diffMembers: diffMembers };
+  // Dates où la continuité change d'une version à l'autre (nombre de trous ou de morceaux).
+  function impactDates(points) {
+    var out = {}, prev = null;
+    (points || []).forEach(function (p) {
+      if (prev && (prev.pieces !== p.pieces || prev.gaps !== p.gaps || prev.broken !== p.broken)) out[p.date] = true;
+      prev = p;
+    });
+    return out;
+  }
+
+  // Retire les modifications sans effet sur la continuité : tags seuls, nœuds ajoutés ou retirés à l'intérieur
+  // d'un chemin sans que les trous changent. Créations, suppressions, appartenance, rôles, extrémités changées
+  // et modifications à une date où la continuité change sont gardées.
+  function filterMinor(events, impact) {
+    return events.filter(function (e) {
+      if (e.action !== 'modified') return true;
+      if (impact && impact[e.date]) return true;
+      if (e.kind === 'relation') return !!(e.members && (e.members.added || e.members.removed));
+      return !!(e.nodes && e.nodes.endsChanged);
+    });
+  }
+
+  var api = { impactDates: impactDates, filterMinor: filterMinor, windowChanges: windowChanges, diffNodes: diffNodes, diffTags: diffTags, diffMembers: diffMembers };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.Filum = Object.assign(root.Filum || {}, api);
 })(typeof self !== 'undefined' ? self : this);
