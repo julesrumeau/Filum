@@ -50,3 +50,12 @@ test('readSearch relit relation et période, ignore ce qui est invalide', () => 
   assert.strictEqual(readSearch('?relation=abc'), null);
   assert.strictEqual(readSearch(''), null);
 });
+
+test('une adresse Waymarked Trails donne la relation de son paramètre id (avec & ou &amp;)', () => {
+  [
+    'https://hiking.waymarkedtrails.org/#route?id=21373346&type=relation',
+    'https://hiking.waymarkedtrails.org/#route?id=21373346&amp;type=relation',
+    'https://cycling.waymarkedtrails.org/#route?type=relation&id=21373346&map=9/44/5',
+    'waymarkedtrails.org/#route?id=21373346',
+  ].forEach(s => assert.deepEqual(parseRelationInput(s), { id: 21373346 }, s));
+});
