@@ -38,6 +38,15 @@
     };
   }
 
+  // Ce que la version `version` de la relation a changé dans ses membres, par rapport à la précédente
+  // (la première version ajoute tous ses membres). null si la version n'est pas dans l'historique.
+  function memberChange(hist, version) {
+    var cur = hist.filter(function (v) { return v.version === version; })[0];
+    if (!cur) return null;
+    var before = hist.filter(function (v) { return v.version < version; }).sort(function (a, b) { return b.version - a.version; })[0];
+    return diffMembers(before ? before.members || [] : [], cur.members || []);
+  }
+
   function versionAt(versions, date) {
     var best = null;
     versions.forEach(function (v) { if (v.timestamp <= date && (!best || v.version > best.version)) best = v; });
@@ -128,7 +137,7 @@
     });
   }
 
-  var api = { impactDates: impactDates, filterMinor: filterMinor, windowChanges: windowChanges, diffNodes: diffNodes, diffTags: diffTags, diffMembers: diffMembers };
+  var api = { impactDates: impactDates, filterMinor: filterMinor, windowChanges: windowChanges, diffNodes: diffNodes, diffTags: diffTags, diffMembers: diffMembers, memberChange: memberChange };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.Filum = Object.assign(root.Filum || {}, api);
 })(typeof self !== 'undefined' ? self : this);

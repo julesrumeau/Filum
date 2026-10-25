@@ -39,8 +39,8 @@ test('texte sans numéro, vide ou numéro nul : erreur', () => {
 
 test('buildSearch : relation seule, ou avec la période (dates AAAA-MM-JJ)', () => {
   assert.strictEqual(buildSearch(7444), '?relation=7444');
-  assert.strictEqual(buildSearch(7444, '2025-01-05T10:00:00Z', '2026-03-01T00:00:00Z'), '?relation=7444&du=2025-01-05&au=2026-03-01');
-  assert.strictEqual(buildSearch(7444, null, '2026-03-01T00:00:00Z'), '?relation=7444&au=2026-03-01');
+  assert.strictEqual(buildSearch(7444, '2025-01-05T00:00:00Z', '2026-03-01T23:59:59Z'), '?relation=7444&du=2025-01-05&au=2026-03-01');
+  assert.strictEqual(buildSearch(7444, null, '2026-03-01T23:59:59Z'), '?relation=7444&au=2026-03-01');
 });
 
 test('readSearch relit relation et période, ignore ce qui est invalide', () => {
@@ -58,4 +58,22 @@ test('une adresse Waymarked Trails donne la relation de son paramètre id (avec 
     'https://cycling.waymarkedtrails.org/#route?type=relation&id=21373346&map=9/44/5',
     'waymarkedtrails.org/#route?id=21373346',
   ].forEach(s => assert.deepEqual(parseRelationInput(s), { id: 21373346 }, s));
+});
+
+test('buildSearch garde l\'heure quand le bord n\'est pas une borne de journée (ticket 21)', () => {
+  assert.strictEqual(buildSearch(17032107, '2025-07-18T20:33:22Z', '2025-07-18T20:45:18Z'),
+    '?relation=17032107&du=2025-07-18T20:33:22Z&au=2025-07-18T20:45:18Z');
+});
+
+test('readSearch accepte une date ou une date avec heure (UTC), ignore une heure invalide', () => {
+  assert.deepStrictEqual(readSearch('?relation=1&du=2025-07-18T20:33:22Z&au=2025-07-18T20:45:18Z'),
+    { id: 1, from: '2025-07-18T20:33:22Z', to: '2025-07-18T20:45:18Z' });
+  assert.deepStrictEqual(readSearch('?relation=1&du=2025-07-18T25:00:00Z'), { id: 1, from: null, to: null });
+});
+
+test('periodBound complète une date en début ou fin de journée, laisse une date avec heure telle quelle', () => {
+  const { periodBound } = require('../src/input.js');
+  assert.strictEqual(periodBound('2025-07-18', false), '2025-07-18T00:00:00Z');
+  assert.strictEqual(periodBound('2025-07-18', true), '2025-07-18T23:59:59Z');
+  assert.strictEqual(periodBound('2025-07-18T20:33:22Z', true), '2025-07-18T20:33:22Z');
 });

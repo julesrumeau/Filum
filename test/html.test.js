@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert');
-const { esc, osmLink, fmtKm, fmtDate, clip } = require('../src/html.js');
+const { esc, osmLink, fmtKm, fmtDate, fmtDateTime, clip } = require('../src/html.js');
 
 test('esc neutralise le HTML venu d\'OSM : chevrons, esperluette, guillemets doubles et simples', () => {
   assert.strictEqual(esc('<img src=x onerror=alert(1)>'), '&lt;img src=x onerror=alert(1)&gt;');
@@ -32,4 +32,8 @@ test('fmtDate garde le jour, clip coupe au-delà de 300 caractères', () => {
   assert.strictEqual(fmtDate('2026-10-13T11:38:31Z'), '2026-10-13');
   assert.strictEqual(clip('abc'), 'abc');
   assert.strictEqual(clip('x'.repeat(400)).length, 301);
+});
+
+test('fmtDateTime : jour et heure UTC à la seconde (ruptures brèves)', () => {
+  assert.strictEqual(fmtDateTime('2025-07-18T20:33:22Z'), '2025-07-18 20:33:22 UTC');
 });

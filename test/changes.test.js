@@ -196,3 +196,18 @@ test('filterMinor : on garde ce qui touche l\'appartenance, les extrémités ou 
   assert.deepStrictEqual(kept.map(e => e.kind + e.id + e.action[0]), ['way1c', 'way4m', 'way5m', 'way6r', 'relation100m']);
   assert.strictEqual(kept[4].members.added, 1);
 });
+
+test('memberChange : membres ajoutés, retirés ou au rôle changé par une version de la relation (ticket 22)', () => {
+  const { memberChange } = require('../src/changes.js');
+  const m = (ref, role) => ({ type: 'way', ref, role: role || '' });
+  const hist = [
+    { version: 1, members: [m(1), m(2)] },
+    { version: 2, members: [m(1), m(3), m(2, 'forward')] }];
+  const c2 = memberChange(hist, 2);
+  assert.deepStrictEqual(c2.added.map(x => x.ref), [3]);
+  assert.deepStrictEqual(c2.removed, []);
+  assert.strictEqual(c2.roleChanged.length, 1);
+  const c1 = memberChange(hist, 1);
+  assert.deepStrictEqual(c1.added.map(x => x.ref), [1, 2]);
+  assert.strictEqual(memberChange(hist, 9), null);
+});

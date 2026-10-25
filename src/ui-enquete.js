@@ -2,7 +2,7 @@
   'use strict';
 
   var F = window.Filum, U = window.FilumUI, $ = U.$, state = U.state, setStatus = U.setStatus, isHole = U.isHole, isWarning = U.isWarning;
-  var esc = F.esc, fmtDate = F.fmtDate, osmLink = F.osmLink, fmtKm = F.fmtKm, clip = F.clip;
+  var esc = F.esc, fmtDate = F.fmtDate, fmtDateTime = F.fmtDateTime, osmLink = F.osmLink, fmtKm = F.fmtKm, clip = F.clip;
 
   function elementLabel(c) {
     var text = (c.type === 'relation' ? 'la relation' : 'chemin ' + c.id) + ' (v' + c.version + ')';
@@ -31,7 +31,7 @@
           + (cs.changesCount === undefined ? '' : ' · ' + cs.changesCount.toLocaleString('fr-FR') + ' changement(s) au total')
           + (cs.createdBy ? ' · ' + esc(cs.createdBy) : '') + '</span>';
       }
-      return '<li>par <strong>' + esc(first.user) + '</strong>, le ' + fmtDate(first.timestamp) + ', '
+      return '<li>par <strong>' + esc(first.user) + '</strong>, le ' + fmtDateTime(first.timestamp) + ', '
         + '<a href="https://www.openstreetmap.org/changeset/' + id + '" target="_blank" rel="noopener">changeset ' + id + '</a>'
         + ' : ' + list.map(elementLabel).join(', ') + info + discussionHtml(discussions[id]) + '</li>';
     }).join('') + '</ul>';
@@ -83,9 +83,9 @@
     var p = state.pendingPeriod;
     state.pendingPeriod = null;
     if (!p || !fr) return;
-    if (p.from && p.from + 'T00:00:00Z' > fr.min) fr.from = p.from + 'T00:00:00Z';
+    if (p.from && F.periodBound(p.from, false) > fr.min) fr.from = F.periodBound(p.from, false);
     if (p.to) {
-      var to = p.to + 'T23:59:59Z';
+      var to = F.periodBound(p.to, true);
       if (to < fr.max) { fr.to = to; fr.toIsMax = false; }
     }
     if (fr.from > fr.to) { fr.from = fr.min; fr.to = fr.max; fr.toIsMax = true; }
@@ -120,6 +120,21 @@
     return fr;
   }
 
+  // Une version de la relation dans la bulle : qui, quand, quel changeset, et ce qu'elle a changé dans les membres.
+  function versionLine(v, fr) {
+    var line = 'Relation v' + v.version + ' par ' + esc(v.user) + ', ' + fmtDateTime(v.timestamp) + ', changeset ' + v.changeset;
+    var c = F.memberChange(fr.hist, v.version);
+    if (!c || !(c.added.length || c.removed.length || c.roleChanged.length)) return line;
+    function names(list) {
+      return list.slice(0, 3).map(function (m) { return m.type + ' ' + Number(m.ref); }).join(', ') + (list.length > 3 ? ' et ' + (list.length - 3) + ' autre(s)' : '');
+    }
+    var parts = [];
+    if (c.added.length) parts.push('+' + c.added.length + ' (' + names(c.added) + ')');
+    if (c.removed.length) parts.push('−' + c.removed.length + ' (' + names(c.removed) + ')');
+    if (c.roleChanged.length) parts.push(c.roleChanged.length + ' rôle(s) changé(s)');
+    return line + '<br><span class="detail">membres ' + parts.join(', ') + '</span>';
+  }
+
   // Bulle au survol de la frise : date, version de la relation proche, rupture en cours à cette date.
   function setupFriseHover(fr) {
     var pistes = $('frise-zone').querySelector('.frise-pistes'), fond = $('frise-fond');
@@ -130,17 +145,15 @@
       var rc = fond.getBoundingClientRect();
       var f = Math.min(1, Math.max(0, (e.clientX - rc.left) / rc.width));
       var info = F.hoverInfo(f, fr.hist, fr.allSpans, fr.min, fr.max, 6 / rc.width);
-      var lines = ['<strong>' + fmtDate(info.date) + '</strong>'];
-      if (info.version) {
-        var v = info.version;
-        lines.push('Relation v' + v.version + ' par ' + esc(v.user) + ', ' + fmtDate(v.timestamp) + ', changeset ' + v.changeset);
-      }
+      var lines = ['<strong>' + fmtDateTime(info.date) + '</strong>'];
+      info.versions.slice(0, 4).forEach(function (v) { lines.push(versionLine(v, fr)); });
+      if (info.versions.length > 4) lines.push('et ' + (info.versions.length - 4) + ' autre(s) version(s) toutes proches');
       if (info.span) {
         var sp = info.span, who = (sp.start.causes || []).slice(0, 2).map(function (c) {
           return (c.type === 'relation' ? 'la relation' : 'chemin ' + c.id) + ' v' + c.version + ' par ' + esc(c.user);
         }).join(', ');
-        lines.push('<span class="rupture">Relation cassée ' + (sp.fromCreation ? 'dès sa création' : 'depuis le ' + fmtDate(sp.start.date))
-          + (sp.end ? ' jusqu\'au ' + fmtDate(sp.end.date) : ' (toujours cassée)') + '</span>' + (who ? '<br>Début : ' + who : ''));
+        lines.push('<span class="rupture">Relation cassée ' + (sp.fromCreation ? 'dès sa création' : 'depuis le ' + fmtDateTime(sp.start.date))
+          + (sp.end ? ' jusqu\'au ' + fmtDateTime(sp.end.date) : ' (toujours cassée)') + '</span>' + (who ? '<br>Début : ' + who : ''));
       }
       bulle.innerHTML = lines.join('<br>');
       bulle.hidden = false;
@@ -207,8 +220,8 @@
     var left = F.toFraction(fr.from, fr.min, fr.max) * 100, right = F.toFraction(fr.to, fr.min, fr.max) * 100;
     html += '<div class="hors" style="left:0;width:' + left + '%"></div><div class="hors" style="left:' + right + '%;right:0"></div>';
     $('frise-fond').innerHTML = html;
-    $('date-g').textContent = 'du ' + fmtDate(fr.from);
-    $('date-d').textContent = 'au ' + (fr.toIsMax ? 'aujourd\'hui' : fmtDate(fr.to));
+    $('date-g').textContent = 'du ' + fmtDateTime(fr.from);
+    $('date-d').textContent = 'au ' + (fr.toIsMax ? 'aujourd\'hui' : fmtDateTime(fr.to));
     var vers = fr.hist.length === 1
       ? 'La relation elle-même n\'a qu\'une version (un seul trait) : ses modifications se trouvent surtout dans l\'historique de ses chemins.'
       : 'Traits : les ' + fr.hist.length + ' versions de la relation.';
@@ -346,7 +359,7 @@
     await showView({ snapshot: snap, results: results, tree: wtree });
     var r = results.filter(function (x) { return x.relationId === fr.relId; })[0];
     var shownCount = wtree.children.filter(function (c) { return c.kind !== 'gap' && c.kind !== 'order'; }).length;
-    $('resume').textContent = 'Période du ' + fmtDate(fr.from) + ' au ' + (fr.toIsMax ? 'aujourd\'hui' : fmtDate(fr.to)) + ' : '
+    $('resume').textContent = 'Période du ' + fmtDateTime(fr.from) + ' au ' + (fr.toIsMax ? 'aujourd\'hui' : fmtDateTime(fr.to)) + ' : '
       + shownCount + ' élément(s) touché(s) affiché(s), ' + wtree.hiddenCount + ' masqué(s) (non modifiés dans la période'
       + (minor ? ' ou seulement ' + minor + ' modification(s) sans effet sur la continuité' : '') + '). '
       + 'État à la date de fin, relation complète : ' + (r ? r.gaps.length + ' trou(s), ' + r.pieces.length + ' morceau(x)' : 'inconnu') + '.';
@@ -357,22 +370,33 @@
       : 'Les changements affichés sont ceux de la période. Positions des nœuds et sous-relations non reconstituées.';
   }
 
+  // Cale les curseurs sur les dates exactes d'une rupture (à la seconde) puis lance l'analyse.
+  function analyzeExact(fr, from, to) {
+    fr.from = from > fr.min ? from : fr.min;
+    fr.toIsMax = !to || to >= fr.max;
+    fr.to = fr.toIsMax ? fr.max : to;
+    buildFrise();
+    U.applyPeriod();
+  }
+
   async function renderSpans(out, spans, fr) {
     var changesets = {}, discussions = {};
     try { changesets = await F.fetchChangesets(F.changesetIds(spans)); } catch (e) { changesets = {}; }
     try { discussions = await F.fetchDiscussions(changesets); } catch (e) { discussions = {}; }
     if (state.frise !== fr) return;
     var atDate = !fr.toIsMax;
-    var html = '<p class="detail">Périodes de rupture, du ' + fmtDate(fr.from) + ' au ' + (atDate ? fmtDate(fr.to) : 'aujourd\'hui') + '.</p>';
+    var html = '<p class="detail">Périodes de rupture, du ' + fmtDateTime(fr.from) + ' au ' + (atDate ? fmtDateTime(fr.to) : 'aujourd\'hui') + '.</p>';
     if (!spans.length) {
       html += '<p>Aucune période de rupture sur cette période dans l\'historique chargé.</p>';
     }
     var parts = F.splitSpans(spans, 86400000);
     function spanHtml(sp) {
       return '<div class="periode"><p><strong>' + (sp.end ? 'Rupture réparée' : (atDate ? 'Rupture non réparée à cette date' : 'Rupture en cours'))
-        + '</strong> : depuis le ' + fmtDate(sp.start.date) + (sp.fromCreation ? ' (dès la création de la relation)' : '')
+        + '</strong> : depuis le ' + fmtDateTime(sp.start.date) + (sp.fromCreation ? ' (dès la création de la relation)' : '')
         + (sp.startsBeforeWindow ? ' (commencée avant la période étudiée)' : '')
-        + (sp.end ? ', jusqu\'au ' + fmtDate(sp.end.date) : '') + '.</p>'
+        + (sp.end ? ', jusqu\'au ' + fmtDateTime(sp.end.date) : '') + '.</p>'
+        + '<p><button class="voir" data-act="periode" data-from="' + esc(sp.start.date) + '" data-to="' + esc(sp.end ? sp.end.date : '') + '">'
+        + 'Analyser cette période exacte</button></p>'
         + '<p>Modification(s) à ce moment : </p>' + causesHtml(sp.start.causes, changesets, discussions)
         + (sp.end ? '<p>Réparation : </p>' + causesHtml(sp.end.causes, changesets, discussions) : '')
         + '</div>';
@@ -391,6 +415,10 @@
         : 'L\'historique de tous les chemins a été lu' + (fr.failedCount ? ' (sauf ' + fr.failedCount + ' en échec)' : '')
           + ' ; les positions des nœuds et les sous-relations ne sont pas reconstituées.') + '</p>';
     out.innerHTML = html;
+    out.addEventListener('click', function (e) {
+      var b = e.target.closest('button[data-act=periode]');
+      if (b) analyzeExact(fr, b.dataset.from, b.dataset.to);
+    });
     U.highlightEnquete(state.selected);
   }
 

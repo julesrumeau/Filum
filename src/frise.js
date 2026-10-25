@@ -63,18 +63,19 @@
   }
 
   // Ce qu'il y a sous le curseur de la souris à la fraction f : la date, la version de la relation la plus
-  // proche (à moins de tol de la frise), la rupture qui contient la date (une rupture en cours va jusqu'au bout).
+  // proche (à moins de tol de la frise) et toutes celles à moins de tol (versions rapprochées), la rupture qui contient la date (une rupture en cours va jusqu'au bout).
   function hoverInfo(f, hist, spans, minIso, maxIso, tol) {
-    var date = fromFraction(f, minIso, maxIso), best = null, bestD = tol;
+    var date = fromFraction(f, minIso, maxIso), best = null, bestD = tol, near = [];
     (hist || []).forEach(function (v) {
       var d = Math.abs(toFraction(v.timestamp, minIso, maxIso) - f);
+      if (d <= tol) near.push(v);
       if (d <= bestD) { best = v; bestD = d; }
     });
     var span = null;
     (spans || []).forEach(function (sp) {
       if (!span && sp.start.date <= date && (!sp.end || date <= sp.end.date)) span = sp;
     });
-    return { date: date, version: best, span: span };
+    return { date: date, version: best, versions: near.sort(function (a, b) { return a.version - b.version; }), span: span };
   }
 
   var api = { hoverInfo: hoverInfo, estimateLoad: estimateLoad, splitSpans: splitSpans, toFraction: toFraction, fromFraction: fromFraction,

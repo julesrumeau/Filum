@@ -19,9 +19,12 @@
 
   function fmtDate(iso) { return iso.slice(0, 10); }
 
+  // Jour et heure UTC à la seconde : une rupture brève se joue en quelques minutes.
+  function fmtDateTime(iso) { return iso.slice(0, 10) + ' ' + iso.slice(11, 19) + ' UTC'; }
+
   function clip(text) { return text.length > 300 ? text.slice(0, 300) + '…' : text; }
 
-  var api = { esc: esc, osmLink: osmLink, fmtKm: fmtKm, fmtDate: fmtDate, clip: clip };
+  var api = { esc: esc, osmLink: osmLink, fmtKm: fmtKm, fmtDate: fmtDate, fmtDateTime: fmtDateTime, clip: clip };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.Filum = Object.assign(root.Filum || {}, api);
 })(typeof self !== 'undefined' ? self : this);

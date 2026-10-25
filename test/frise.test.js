@@ -146,3 +146,15 @@ test('hoverInfo : la version la plus proche gagne, une rupture en cours va jusqu
   const open = [{ start: { date: '2021-06-01T00:00:00Z' }, end: null }];
   assert.strictEqual(hoverInfo(0.99, [], open, MIN, MAX, 0.01).span, open[0]);
 });
+
+test('hoverInfo : toutes les versions proches du curseur sont données, pas seulement la plus proche (ticket 22)', () => {
+  const hist = [
+    { version: 1, timestamp: '2020-01-01T00:00:00Z' },
+    { version: 3, timestamp: '2020-01-16T09:15:28Z' },
+    { version: 4, timestamp: '2020-01-16T09:30:44Z' },
+    { version: 5, timestamp: '2021-01-01T00:00:00Z' }];
+  const f = toFraction('2020-01-16T09:20:00Z', MIN, MAX);
+  const info = hoverInfo(f, hist, null, MIN, MAX, 0.01);
+  assert.deepStrictEqual(info.versions.map(v => v.version), [3, 4]);
+  assert.strictEqual(info.version.version, 3);
+});
