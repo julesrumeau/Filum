@@ -346,6 +346,35 @@
     }
   }
 
+  // Chemins retirés de la relation ou supprimés dans la période : leurs nœuds (dernière version connue) et les positions
+  // de ces nœuds, pour les dessiner sur la carte. Les nœuds supprimés demandent un appel d'historique chacun (100 au plus).
+  async function loadRemovedShapes(fr, wtree) {
+    var removed = {}, need = {}, unresolved = 0;
+    wtree.children.forEach(function (c) {
+      if (c.kind !== 'way' || !c.removed) return;
+      var nodes = F.lastWayNodes(fr.ctx, c.id);
+      if (!nodes.length) return;
+      removed[c.id] = nodes;
+      nodes.forEach(function (n) { if (!state.nodes[n]) need[n] = true; });
+    });
+    var ids = Object.keys(need).map(Number);
+    if (ids.length) {
+      try {
+        var res = await F.fetchNodePositions(ids, undefined, 100);
+        Object.keys(res.nodes).forEach(function (k) { state.nodes[k] = res.nodes[k]; });
+        unresolved = res.unresolved;
+      } catch (e) { unresolved = ids.length; }
+    }
+    return { removed: removed, unresolved: unresolved };
+  }
+
+  function removedNote(shapes) {
+    var n = Object.keys(shapes.removed).length;
+    if (!n) return '';
+    return ' ' + n + ' chemin(s) retiré(s) ou supprimé(s) dessiné(s) en pointillé rouge, d\'après leur dernière version connue'
+      + (shapes.unresolved ? ' (' + shapes.unresolved + ' nœud(s) sans position retrouvée)' : '') + '.';
+  }
+
   // Contributeurs de la période, repliés : qui a fait combien (tous les événements, mineurs compris).
   function renderContributors(stats) {
     var host = $('enquete-res') || $('enquete'), box = $('contributeurs');
@@ -385,7 +414,9 @@
       results = F.analyzeTree(snap, fr.relId); tree = F.buildTree(snap, fr.relId);
     }
     var wtree = F.windowTree(tree, events);
+    var shapes = await loadRemovedShapes(fr, wtree);
     state.window = windowState(wtree);
+    state.window.removed = shapes.removed;
     state.shown = fr.relId;
     await showView({ snapshot: snap, results: results, tree: wtree });
     var r = results.filter(function (x) { return x.relationId === fr.relId; })[0];
@@ -399,7 +430,8 @@
     $('frise-note').className = pending ? 'erreur' : 'detail';
     $('frise-note').textContent = pending
       ? 'ATTENTION : il reste ' + pending + ' chemin(s) dont l\'historique n\'est pas lu, les changements de la période peuvent être incomplets.'
-      : 'Les changements affichés sont ceux de la période. Positions des nœuds et sous-relations non reconstituées.';
+      : 'Les changements affichés sont ceux de la période. Positions des nœuds et sous-relations non reconstituées.'
+        + removedNote(shapes);
   }
 
   // Cale les curseurs sur les dates exactes d'une rupture (à la seconde) puis lance l'analyse.

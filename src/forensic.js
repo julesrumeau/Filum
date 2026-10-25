@@ -111,6 +111,14 @@
     return spans;
   }
 
+  // Nœuds de la dernière version d'un chemin qui en avait (un chemin supprimé a une dernière version sans nœuds).
+  // Vide si son historique n'est pas chargé.
+  function lastWayNodes(ctx, wayId) {
+    var list = (ctx.wayHistories && ctx.wayHistories[wayId]) || [], best = null;
+    list.forEach(function (v) { if (v.nodes && v.nodes.length && (!best || v.version > best.version)) best = v; });
+    return best ? best.nodes.slice() : [];
+  }
+
   function findBreaks(ctx, relationId) { return spansOf(timeline(ctx, relationId)); }
 
   // Chemins dont l'historique reste à lire : d'abord ceux membres à la date `toIso` (indispensables pour
@@ -165,7 +173,7 @@
   }
 
   var api = { stateAt: stateAt, timeline: timeline, timelineAsync: timelineAsync, spansOf: spansOf, findBreaks: findBreaks, borderWayRefs: borderWayRefs,
-    changesetIds: changesetIds, wayIdsToLoad: wayIdsToLoad };
+    changesetIds: changesetIds, wayIdsToLoad: wayIdsToLoad, lastWayNodes: lastWayNodes };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.Filum = Object.assign(root.Filum || {}, api);
 })(typeof self !== 'undefined' ? self : this);

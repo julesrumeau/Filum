@@ -116,6 +116,30 @@
     });
   }
 
+  // Positions de nœuds : l'état actuel en appels groupés, puis, pour ceux supprimés depuis (renvoyés sans coordonnées),
+  // la dernière version visible de leur historique, un appel par nœud, au plus `cap` appels (8 en parallèle).
+  // Renvoie { nodes: { id: {id, lat, lon} }, unresolved } : unresolved compte les nœuds restés sans position.
+  async function fetchNodePositions(ids, get, cap) {
+    get = get || getJson;
+    var nodes = {}, gone = [];
+    var current = await fetchBulk('node', ids, get);
+    current.forEach(function (n) {
+      if (typeof n.lat === 'number' && typeof n.lon === 'number') nodes[n.id] = { id: n.id, lat: n.lat, lon: n.lon };
+    });
+    ids.forEach(function (id) { if (!nodes[id] && gone.indexOf(id) < 0) gone.push(id); });
+    var todo = gone.slice(0, cap === undefined ? 100 : cap);
+    for (var i = 0; i < todo.length; i += 8) {
+      await Promise.all(todo.slice(i, i + 8).map(async function (id) {
+        try {
+          var versions = (await get('node/' + id + '/history.json')).elements.filter(function (v) { return typeof v.lat === 'number' && typeof v.lon === 'number'; });
+          var last = versions.reduce(function (a, v) { return !a || v.version > a.version ? v : a; }, null);
+          if (last) nodes[id] = { id: id, lat: last.lat, lon: last.lon };
+        } catch (e) { /* nœud illisible : compté comme sans position */ }
+      }));
+    }
+    return { nodes: nodes, unresolved: ids.filter(function (id, k) { return !nodes[id] && ids.indexOf(id) === k; }).length };
+  }
+
   // Historique de la relation, et de quelques chemins seulement : ceux aux bords des trous
   // (borderWayIds) puis ceux qui ont été retirés de la relation au fil du temps. Les autres chemins
   // gardent leur état actuel (currentWays). Au plus `maxWays` chemins, `truncated` le dit.
@@ -275,7 +299,7 @@
     }
   }
 
-  var api = { fetchMap: fetchMap, fetchNodeWays: fetchNodeWays, fetchMemberNodes: fetchMemberNodes, fetchWay: fetchWay, fetchParents: fetchParents, fetchWayHistories: fetchWayHistories, fetchRelationHistory: fetchRelationHistory, fetchDiscussions: fetchDiscussions, fetchTree: fetchTree, fetchNodes: fetchNodes, fetchHistoryContext: fetchHistoryContext,
+  var api = { fetchMap: fetchMap, fetchNodeWays: fetchNodeWays, fetchMemberNodes: fetchMemberNodes, fetchWay: fetchWay, fetchParents: fetchParents, fetchWayHistories: fetchWayHistories, fetchRelationHistory: fetchRelationHistory, fetchDiscussions: fetchDiscussions, fetchTree: fetchTree, fetchNodes: fetchNodes, fetchNodePositions: fetchNodePositions, fetchHistoryContext: fetchHistoryContext,
     fetchChangesets: fetchChangesets, MAX_IDS: MAX_IDS, MAX_URL_CHARS: MAX_URL_CHARS, API_BASE: BASE };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.Filum = Object.assign(root.Filum || {}, api);

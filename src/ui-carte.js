@@ -100,6 +100,15 @@
     return out;
   }
 
+  // Chemins retirés ou supprimés dans la période, avec les positions retrouvées de leurs nœuds (dernière version connue).
+  function removedLines() {
+    var removed = (state.window && state.window.removed) || {};
+    return Object.keys(removed).map(function (id) {
+      var p = removed[id].map(function (n) { return state.nodes[n]; }).filter(function (n) { return n && typeof n.lat === 'number'; });
+      return p.length > 1 ? { id: id, pts: p, action: 'removed' } : null;
+    }).filter(Boolean);
+  }
+
   function renderMap(result) {
     var nodes = state.nodes, ways = {};
     state.snapshot.elements.forEach(function (e) { if (e.type === 'way') ways[e.id] = e; });
@@ -114,6 +123,7 @@
       var p = ways[ref].nodes.map(function (n) { return nodes[n]; }).filter(function (n) { return n && typeof n.lat === 'number'; });
       if (p.length) { lines.push({ id: ref, pts: p, action: state.window ? state.window.ways[ref] : '' }); pts = pts.concat(p); }
     });
+    removedLines().forEach(function (l) { lines.push(l); pts = pts.concat(l.pts); });
     // Une relation sans chemin (parcours de santé, arrêts seuls) se dessine avec ses nœuds membres.
     if (!pts.length && !state.window) pts = memberNodeRows(result.relationId).filter(function (n) { return typeof n.lat === 'number'; });
     if (!pts.length) {

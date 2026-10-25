@@ -463,3 +463,35 @@ test('sous-relation supprimée : ignorée, le reste est analysé', async () => {
   const snap = await fetchTree(1, fakeApi(db).getJson);
   assert.deepStrictEqual(snap.elements.map(e => e.type + e.id).sort(), ['relation1', 'way10']);
 });
+
+test('fetchNodePositions : positions actuelles, puis historique pour les nœuds supprimés depuis (ticket 5)', async () => {
+  const { fetchNodePositions } = require('../src/osmapi.js');
+  const calls = [];
+  const get = async (path) => {
+    calls.push(path);
+    if (path.startsWith('nodes.json?nodes=')) return { elements: [
+      { type: 'node', id: 1, lat: 10, lon: 20 }, { type: 'node', id: 2, visible: false }, { type: 'node', id: 3, visible: false }] };
+    if (path === 'node/2/history.json') return { elements: [
+      { id: 2, version: 1, lat: 11, lon: 21 }, { id: 2, version: 2, lat: 12, lon: 22 }, { id: 2, version: 3, visible: false }] };
+    if (path === 'node/3/history.json') throw new Error('échec réseau');
+    throw new Error('appel inattendu : ' + path);
+  };
+  const r = await fetchNodePositions([1, 2, 3], get, 100);
+  assert.deepStrictEqual(r.nodes[1], { id: 1, lat: 10, lon: 20 });
+  assert.deepStrictEqual([r.nodes[2].lat, r.nodes[2].lon], [12, 22], 'dernière version visible');
+  assert.strictEqual(r.nodes[3], undefined);
+  assert.strictEqual(r.unresolved, 1);
+});
+
+test('fetchNodePositions : au plus `cap` historiques de nœuds sont lus', async () => {
+  const { fetchNodePositions } = require('../src/osmapi.js');
+  const calls = [];
+  const get = async (path) => {
+    calls.push(path);
+    if (path.startsWith('nodes.json?nodes=')) return { elements: [1, 2, 3, 4].map(id => ({ type: 'node', id, visible: false })) };
+    return { elements: [{ id: 1, version: 1, lat: 1, lon: 1 }] };
+  };
+  const r = await fetchNodePositions([1, 2, 3, 4], get, 2);
+  assert.strictEqual(calls.filter(c => /history/.test(c)).length, 2);
+  assert.strictEqual(r.unresolved, 2);
+});

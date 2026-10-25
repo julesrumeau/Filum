@@ -302,3 +302,13 @@ test('spansOf(points, "mixed") : les membres mélangés (problème d\'ordre sans
   assert.strictEqual(mixed[0].start.causes[0].type, 'relation');
   assert.strictEqual(mixed[0].end.date, T('2022-01-01'));
 });
+
+test('lastWayNodes : les nœuds de la dernière version qui en avait, même si le chemin a été supprimé ensuite (ticket 5)', () => {
+  const { lastWayNodes } = require('../src/forensic.js');
+  const ctx = { relHistory: [], currentWays: {}, wayHistories: {
+    7: [wv(7, 1, T('2020-01-01'), [1, 2, 3]), wv(7, 2, T('2021-01-01'), [1, 2, 3, 4]), wv(7, 3, T('2022-01-01'), [], { visible: false })],
+    8: [wv(8, 1, T('2020-01-01'), [5, 6])] } };
+  assert.deepStrictEqual(lastWayNodes(ctx, 7), [1, 2, 3, 4]);
+  assert.deepStrictEqual(lastWayNodes(ctx, 8), [5, 6]);
+  assert.deepStrictEqual(lastWayNodes(ctx, 9), [], 'historique inconnu');
+});
