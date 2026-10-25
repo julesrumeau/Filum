@@ -150,7 +150,7 @@
     if (piste) { chercherPistes(piste); return; }
     if (!e.target.closest('a, button')) {
       var row = e.target.closest('[data-sel]');
-      if (row) { U.select(row.getAttribute('data-sel'), { fromMap: false }); return; }
+      if (row) { U.select(row.getAttribute('data-sel'), { fromMap: false, fit: e.shiftKey }); return; }
     }
     var b = e.target.closest('button[data-act="map"]');
     if (!b) return;

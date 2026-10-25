@@ -94,7 +94,7 @@
       var sq = sel && $('carte').querySelector('rect[data-sel="' + sel + '"]');
       if (sq && state.map) state.map.focus(Number(sq.getAttribute('data-cx')), Number(sq.getAttribute('data-cy')));
       var line = sel && sel.indexOf('way:') === 0 && $('carte').querySelector('polyline.voie[data-way="' + sel.slice(4) + '"]');
-      if (line && state.map) {
+      if (line && state.map && opts && opts.fit) { // Maj+clic : cadrer le chemin ; un clic simple le met seulement en évidence
         var xs = [], ys = [];
         line.getAttribute('points').split(' ').forEach(function (pt) { var c2 = pt.split(','); xs.push(Number(c2[0])); ys.push(Number(c2[1])); });
         state.map.fit(Math.min.apply(null, xs), Math.min.apply(null, ys), Math.max.apply(null, xs), Math.max.apply(null, ys));
