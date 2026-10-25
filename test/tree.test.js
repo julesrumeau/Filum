@@ -418,3 +418,18 @@ test('relationLabel : stage ajoute « étape N », seul ou à la suite du libell
   assert.strictEqual(relationLabel({ stage: '4' }), 'étape 4');
   assert.strictEqual(relationLabel({ from: 'A', to: 'B', stage: '' }), 'A → B');
 });
+
+test('buildTree : un chemin fermé sur lui-même porte loop self (ticket 2)', () => {
+  const t = buildTree({ elements: [W(1, [1, 2, 3, 1]), W(2, [5, 6]), R(100, [m('way', 1), m('way', 2)])] }, 100);
+  assert.strictEqual(t.children[0].loop.kind, 'self');
+  assert.strictEqual(t.children[1].loop, undefined);
+});
+
+test('buildTree : un contour fermé de plusieurs chemins donne début, milieu et fin (ticket 2)', () => {
+  const t = buildTree({ elements: [
+    W(1, [1, 2, 3]), W(2, [3, 4, 5]), W(3, [5, 6, 1]), W(4, [20, 21]),
+    R(100, [m('way', 2, 'outer'), m('way', 1, 'outer'), m('way', 3, 'outer'), m('way', 4, 'outer')], { type: 'multipolygon' }),
+  ] }, 100);
+  const loops = t.children.map(c => c.loop && c.loop.kind + ':' + c.loop.pos + '/' + c.loop.size);
+  assert.deepStrictEqual(loops, ['ring:1/3', 'ring:3/3', 'ring:2/3', undefined]);
+});

@@ -39,6 +39,7 @@ Taille (estimation grossière) : S = moins d'une heure, M = quelques heures, L =
 - Polygones : bouts non raccordés classés libre, posé sur le milieu d'un chemin, embranchement ; liste A, B, A = un trou (trous = morceaux - 1, mesuré sur 8 relations) (21/10/2026)
 - Fond de carte : tuiles décalées en zoomant corrigées (21/10/2026, voir CLAUDE.md)
 - Tickets #4, #21, #22 (frise) : heure UTC à la seconde partout, adresse avec heure (`du=AAAA-MM-JJThh:mm:ssZ`), bouton « Analyser cette période exacte » sur chaque rupture, bulle de la frise avec toutes les versions proches et leurs membres ajoutés ou retirés
+- Ticket #2 (23/10/2026) : icône de bouclage dans l'arbre (chemin fermé sur lui-même, début, suite, fin d'un contour fermé de plusieurs chemins), vérifié sur 53137
 - Tickets #10 (stage dans le libellé) et #11 (clic simple sans zoom, Maj+clic pour cadrer un chemin), 23/10/2026
 - Ticket #15 (23/10/2026) : la frise et la fenêtre sur les modifications s'appliquent aussi à une relation faite de sous-relations (14234324 : v23 à v25, +3 membres), sans descendre dans les sous-relations
 - Ticket #20 : périodes de membres mélangés (problème d'ordre sans trou) dans la frise (bandes orange) et la liste de l'enquête, mesuré sur 17032107 : du 2026-10-09 (v16, Cavokld) au 2026-10-23 (v17, pyrog), comme KPN

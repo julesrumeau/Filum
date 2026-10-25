@@ -58,6 +58,7 @@
         children: [],
       }, metaOf(rel));
       if (r.isPolygon) node.rings = ringsSummary(rel, ways);
+      var loops = loopsOf(rel, ways, r.isPolygon);
       var path = ancestors.concat([id]);
       var before = {};
       function queue(list, kind, key) {
@@ -83,7 +84,7 @@
             kind: 'way', id: m.ref, role: m.role || '', name: (w.tags && w.tags.name) || null,
             nodeCount: w.nodes.length, ends: [w.nodes[0], w.nodes[w.nodes.length - 1]],
             border: !!borders[id][m.ref], notes: notesOf(w), children: [],
-          }, metaOf(w)));
+          }, metaOf(w), loops[m.ref] ? { loop: loops[m.ref] } : {}));
         } else {
           node.children.push(nodeRow(m, memberNodes[m.ref]));
         }
@@ -181,6 +182,26 @@
       out[ring.role].count++;
       if (ring.closed) out[ring.role].closed++;
       else out.open.push({ role: ring.role, ways: ring.ways.length });
+    });
+    return out;
+  }
+
+  // Boucles : un chemin fermé sur lui-même (self), ou un chemin d'un contour fermé de plusieurs chemins d'un
+  // polygone (ring, position et taille dans le contour). Renvoie { refChemin: { kind, pos, size } }.
+  function loopsOf(rel, ways, isPolygon) {
+    var out = {};
+    rel.members.forEach(function (mb) {
+      var w = mb.type === 'way' && ways[mb.ref];
+      if (w && w.nodes.length > 2 && w.nodes[0] === w.nodes[w.nodes.length - 1]) out[mb.ref] = { kind: 'self' };
+    });
+    if (!isPolygon) return out;
+    var wm = [];
+    rel.members.forEach(function (mb) {
+      if (mb.type === 'way' && ways[mb.ref]) wm.push({ ref: mb.ref, role: mb.role || '', nodes: ways[mb.ref].nodes });
+    });
+    R.buildRings(wm).forEach(function (ring) {
+      if (!ring.closed || ring.ways.length < 2) return;
+      ring.ways.forEach(function (ref, k) { out[ref] = { kind: 'ring', pos: k + 1, size: ring.ways.length }; });
     });
     return out;
   }
