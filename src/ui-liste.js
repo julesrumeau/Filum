@@ -157,7 +157,7 @@
       if (n.cycle) return '<div class="ligne-arbre">relation ' + osmLink('relation', n.id) + ' (déjà dans l\'arbre plus haut, cycle)' + role + '</div>';
       if (n.missing) return '<div class="ligne-arbre">relation ' + osmLink('relation', n.id) + ' absente des données chargées' + role + '</div>';
       return '<span class="pastille ' + n.status + '"></span><strong>' + esc(n.name || 'relation') + '</strong> '
-        + osmLink('relation', n.id) + role + ' <span class="detail">' + summaryText(n) + ' · ' + metaText(n) + '</span> '
+        + osmLink('relation', n.id) + (n.osmc ? ' ' + F.osmcSvg(n.osmc) : '') + role + ' <span class="detail">' + summaryText(n) + ' · ' + metaText(n) + '</span> '
         + (state.window ? '' : '<button class="voir" data-act="map" data-id="' + n.id + '">Tracé</button>') + notesHtml(n);
     }
     if (n.kind === 'way') {

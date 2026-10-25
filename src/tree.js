@@ -50,7 +50,7 @@
     function relationNode(id, role, ancestors) {
       var rel = rels[id], r = analyze(id);
       var node = Object.assign({
-        kind: 'relation', id: id, role: role, name: relationLabel(rel.tags),
+        kind: 'relation', id: id, role: role, name: relationLabel(rel.tags), osmc: (rel.tags && rel.tags['osmc:symbol']) || null,
         status: statusOf(r), notes: notesOf(rel),
         summary: { gaps: r.gaps.length, orderIssues: r.orderIssues.length, openEnds: r.openEnds.length,
           detached: r.detached.length, pieces: r.pieces.length, missing: r.missing.length, isPolygon: r.isPolygon,
