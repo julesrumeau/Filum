@@ -224,3 +224,10 @@ test('relation parente (que des sous-relations) : les membres relations ajoutés
   assert.deepStrictEqual(e.members.addedList.map(m => m.type + m.ref), ['relation9']);
   assert.deepStrictEqual(e.members.removedList.map(m => m.type + m.ref), ['relation8']);
 });
+
+test('tagChangeKind : ajout, modification ou retrait d\'un tag (ticket 14)', () => {
+  const { tagChangeKind } = require('../src/changes.js');
+  assert.strictEqual(tagChangeKind({ key: 'a', before: undefined, after: '1' }), 'ajout');
+  assert.strictEqual(tagChangeKind({ key: 'a', before: '1', after: '2' }), 'modif');
+  assert.strictEqual(tagChangeKind({ key: 'a', before: '1', after: undefined }), 'retrait');
+});

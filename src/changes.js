@@ -38,6 +38,11 @@
     };
   }
 
+  // Nature d'un changement de tag ({ key, before, after }) : ajout, modif ou retrait.
+  function tagChangeKind(t) {
+    return t.before === undefined ? 'ajout' : t.after === undefined ? 'retrait' : 'modif';
+  }
+
   // Ce que la version `version` de la relation a changé dans ses membres, par rapport à la précédente
   // (la première version ajoute tous ses membres). null si la version n'est pas dans l'historique.
   function memberChange(hist, version) {
@@ -137,7 +142,7 @@
     });
   }
 
-  var api = { impactDates: impactDates, filterMinor: filterMinor, windowChanges: windowChanges, diffNodes: diffNodes, diffTags: diffTags, diffMembers: diffMembers, memberChange: memberChange };
+  var api = { impactDates: impactDates, filterMinor: filterMinor, windowChanges: windowChanges, diffNodes: diffNodes, diffTags: diffTags, diffMembers: diffMembers, memberChange: memberChange, tagChangeKind: tagChangeKind };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.Filum = Object.assign(root.Filum || {}, api);
 })(typeof self !== 'undefined' ? self : this);

@@ -92,8 +92,9 @@
       if (e.nodes.added.length && e.action !== 'created') rows.push('Nœuds ajoutés : ' + linkList('node', e.nodes.added));
     }
     (e.tags || []).slice(0, PROOF_MAX).forEach(function (t) {
-      rows.push('Tag ' + esc(t.key) + ' : ' + (t.before === undefined ? '(absent)' : '« ' + esc(t.before) + ' »')
-        + ' → ' + (t.after === undefined ? '(retiré)' : '« ' + esc(t.after) + ' »'));
+      var kind = F.tagChangeKind(t), sign = { ajout: '+', modif: '~', retrait: '−' }[kind];
+      rows.push('<span class="tag-' + kind + '"><b>' + sign + '</b> Tag ' + esc(t.key) + ' : ' + (t.before === undefined ? '(absent)' : '« ' + esc(t.before) + ' »')
+        + ' → ' + (t.after === undefined ? '(retiré)' : '« ' + esc(t.after) + ' »') + '</span>');
     });
     if (e.members && e.members.addedList) {
       var key = function (m) { return m.type + ' ' + osmLink(m.type, m.ref) + (m.role ? ' (' + esc(m.role) + ')' : ''); };
