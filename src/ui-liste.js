@@ -6,7 +6,7 @@
 
   function metaText(n) {
     if (!n.version) return '';
-    return 'v' + n.version + ' · ' + esc(n.user) + ' · ' + fmtDate(n.timestamp);
+    return 'v' + n.version + ' · ' + F.userLink(n.user) + ' · ' + fmtDate(n.timestamp);
   }
 
   function summaryText(n) {

@@ -24,7 +24,12 @@
 
   function clip(text) { return text.length > 300 ? text.slice(0, 300) + '…' : text; }
 
-  var api = { esc: esc, osmLink: osmLink, fmtKm: fmtKm, fmtDate: fmtDate, fmtDateTime: fmtDateTime, clip: clip };
+  // Nom d'un contributeur avec un lien vers « How did you contribute » (nom encodé dans l'adresse, échappé à l'affichage).
+  function userLink(name) {
+    return '<a href="https://hdyc.neis-one.org/?' + encodeURIComponent(String(name)) + '" target="_blank" rel="noopener">' + esc(name) + '</a>';
+  }
+
+  var api = { userLink: userLink, esc: esc, osmLink: osmLink, fmtKm: fmtKm, fmtDate: fmtDate, fmtDateTime: fmtDateTime, clip: clip };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.Filum = Object.assign(root.Filum || {}, api);
 })(typeof self !== 'undefined' ? self : this);
