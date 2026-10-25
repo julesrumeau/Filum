@@ -57,7 +57,7 @@
         var relevant = byDate[date].some(function (c) { return c.type === 'relation' || members[c.id]; });
         if (!relevant && points.length) {
           var prev = points[points.length - 1];
-          points.push({ date: date, causes: byDate[date], broken: prev.broken, pieces: prev.pieces, gaps: prev.gaps });
+          points.push({ date: date, causes: byDate[date], broken: prev.broken, mixed: prev.mixed, pieces: prev.pieces, gaps: prev.gaps });
           continue;
         }
         var r = C.analyzeContinuity(snap, relationId);
@@ -65,6 +65,7 @@
           date: date,
           causes: byDate[date],
           broken: r.gaps.length > 0 || r.openEnds.length > 0,
+          mixed: r.orderIssues.length > 0, // membres mélangés : liste mal ordonnée, même sans trou
           pieces: r.pieces.length,
           gaps: r.gaps.length,
         });
@@ -94,13 +95,15 @@
 
   // Périodes pendant lesquelles la relation est cassée : début (date et versions responsables)
   // et fin (réparation) ou null si c'est toujours cassé.
-  function spansOf(points) {
+  // `field` choisit ce qu'on suit : 'broken' (trous, par défaut) ou 'mixed' (membres mélangés).
+  function spansOf(points, field) {
+    field = field || 'broken';
     var spans = [], open = null;
     points.forEach(function (p, i) {
-      if (p.broken && !open) {
+      if (p[field] && !open) {
         open = { start: { date: p.date, causes: p.causes }, end: null, fromCreation: i === 0 };
         spans.push(open);
-      } else if (!p.broken && open) {
+      } else if (!p[field] && open) {
         open.end = { date: p.date, causes: p.causes };
         open = null;
       }

@@ -213,6 +213,11 @@
           + (b.left * 100) + '%;width:' + Math.max(b.width * 100, 0.6) + '%"></div>';
       }).join('');
     }
+    if (fr.mixedSpans) {
+      html += F.bandsOf(fr.mixedSpans, fr.min, fr.max).map(function (b) {
+        return '<div class="bande ordre" style="left:' + (b.left * 100) + '%;width:' + Math.max(b.width * 100, 0.6) + '%"></div>';
+      }).join('');
+    }
     html += F.tickFractions(fr.hist.map(function (v) { return v.timestamp; }), fr.min, fr.max).map(function (x) {
       return '<div class="repere" style="left:' + (x * 100) + '%"></div>';
     }).join('');
@@ -226,7 +231,7 @@
       ? 'La relation elle-même n\'a qu\'une version (un seul trait) : ses modifications se trouvent surtout dans l\'historique de ses chemins.'
       : 'Traits : les ' + fr.hist.length + ' versions de la relation.';
     $('frise-legende').textContent = vers
-      + (fr.allSpans ? ' Rouge : périodes où la relation est cassée (toute son histoire, ne dépend pas des curseurs). Zone grisée : hors de la période choisie.'
+      + (fr.allSpans ? ' Rouge : périodes où la relation est cassée (toute son histoire, ne dépend pas des curseurs). Orange : membres mélangés (liste mal ordonnée, sans trou). Zone grisée : hors de la période choisie.'
         : ' Les périodes où la relation est cassée (en rouge) apparaîtront après la lecture de l\'historique : choisissez une période puis « Analyser ».')
       + (uncertain ? ' Rayé : période approximative, il reste ' + pending + ' chemin(s) dont l\'historique n\'est pas lu.' : '');
     var changed = !fr.applied || fr.applied.from !== fr.from || fr.applied.to !== fr.to;
@@ -251,6 +256,7 @@
     if (state.frise !== fr) return;
     fr.points = points;
     fr.allSpans = F.spansOf(points);
+    fr.mixedSpans = F.spansOf(points, 'mixed');
     paintFrise();
   }
 
@@ -328,7 +334,8 @@
       if (state.frise !== fr) return;
       paintCharge();
       var spans = F.clipSpans(F.spansOf(fr.points.filter(function (p) { return p.date <= fr.to; })), fr.from);
-      await renderSpans(out, spans, fr);
+      var mixed = F.clipSpans(F.spansOf(fr.points.filter(function (p) { return p.date <= fr.to; }), 'mixed'), fr.from);
+      await renderSpans(out, spans, fr, mixed);
       if (isFull(fr)) {
         $('frise-note').textContent = '';
         if (state.snapshot !== state.live.snapshot) { useLive(); U.renderList(); await U.showMap(state.live.results[0], true); }
@@ -379,9 +386,10 @@
     U.applyPeriod();
   }
 
-  async function renderSpans(out, spans, fr) {
+  async function renderSpans(out, spans, fr, mixed) {
+    mixed = mixed || [];
     var changesets = {}, discussions = {};
-    try { changesets = await F.fetchChangesets(F.changesetIds(spans)); } catch (e) { changesets = {}; }
+    try { changesets = await F.fetchChangesets(F.changesetIds(spans.concat(mixed))); } catch (e) { changesets = {}; }
     try { discussions = await F.fetchDiscussions(changesets); } catch (e) { discussions = {}; }
     if (state.frise !== fr) return;
     var atDate = !fr.toIsMax;
@@ -390,8 +398,9 @@
       html += '<p>Aucune période de rupture sur cette période dans l\'historique chargé.</p>';
     }
     var parts = F.splitSpans(spans, 86400000);
-    function spanHtml(sp) {
-      return '<div class="periode"><p><strong>' + (sp.end ? 'Rupture réparée' : (atDate ? 'Rupture non réparée à cette date' : 'Rupture en cours'))
+    function spanHtml(sp, fixed, notFixed) {
+      return '<div class="periode"><p><strong>' + (sp.end ? (fixed ? fixed + ', corrigé' : 'Rupture réparée')
+          : (notFixed || (atDate ? 'Rupture non réparée à cette date' : 'Rupture en cours')))
         + '</strong> : depuis le ' + fmtDateTime(sp.start.date) + (sp.fromCreation ? ' (dès la création de la relation)' : '')
         + (sp.startsBeforeWindow ? ' (commencée avant la période étudiée)' : '')
         + (sp.end ? ', jusqu\'au ' + fmtDateTime(sp.end.date) : '') + '.</p>'
@@ -404,7 +413,12 @@
     parts.long.forEach(function (sp) { html += spanHtml(sp); });
     if (parts.brief.length) {
       html += '<details class="breves"><summary>' + parts.brief.length + ' rupture(s) brève(s), de moins d\'un jour (le plus souvent '
-        + 'une édition faite en plusieurs envois)</summary>' + parts.brief.map(spanHtml).join('') + '</details>';
+        + 'une édition faite en plusieurs envois)</summary>' + parts.brief.map(function (sp) { return spanHtml(sp); }).join('') + '</details>';
+    }
+    if (mixed.length) {
+      html += '<h3>Membres mélangés (ordre de la liste)</h3><p class="detail">La relation reste d\'un seul morceau, mais ses membres ne sont plus '
+        + 'dans l\'ordre du parcours (Knooppuntnet parle de membres mélangés).</p>'
+        + mixed.map(function (sp) { return spanHtml(sp, 'Membres mélangés', 'Membres encore mélangés'); }).join('');
     }
     var pending = F.wayIdsToLoad(fr.ctx, fr.max).length;
     html += '<p class="limite">Ce sont des pistes, pas des preuves : une modification au moment de la rupture '

@@ -282,3 +282,23 @@ test('stateAt conserve les tags des chemins (rond-point), historique ou état ac
   assert.strictEqual(snap.elements.find(e => e.id === 1).tags.junction, 'roundabout');
   assert.strictEqual(snap.elements.find(e => e.id === 2).tags.highway, 'path');
 });
+
+test('spansOf(points, "mixed") : les membres mélangés (problème d\'ordre sans trou) forment leur propre période (ticket 20)', () => {
+  const ctx = {
+    relHistory: [rv(100, 1, T('2020-01-01'), [1, 2, 3]), rv(100, 2, T('2021-01-01'), [1, 3, 2]), rv(100, 3, T('2022-01-01'), [1, 2, 3])],
+    wayHistories: {
+      1: [wv(1, 1, T('2020-01-01'), [10, 11, 12])],
+      2: [wv(2, 1, T('2020-01-01'), [12, 13, 14])],
+      3: [wv(3, 1, T('2020-01-01'), [14, 15, 16])],
+    },
+    currentWays: {},
+  };
+  const points = timeline(ctx, 100);
+  assert.deepStrictEqual(points.map(p => p.mixed), [false, true, false]);
+  assert.strictEqual(spansOf(points).length, 0, 'pas un trou');
+  const mixed = spansOf(points, 'mixed');
+  assert.strictEqual(mixed.length, 1);
+  assert.strictEqual(mixed[0].start.date, T('2021-01-01'));
+  assert.strictEqual(mixed[0].start.causes[0].type, 'relation');
+  assert.strictEqual(mixed[0].end.date, T('2022-01-01'));
+});
