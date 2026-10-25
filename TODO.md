@@ -13,7 +13,7 @@ Taille (estimation grossière) : S = moins d'une heure, M = quelques heures, L =
 
 ## Plus tard, hors périmètre actuel
 
-- Frise et forensic directement sur une relation parente (EuroVelo) : coûte l'historique de chaque sous-relation et de chaque chemin (plus de 1 000 appels), le bouton « Enquêter » sur la sous-relation cassée couvre le besoin courant
+- Forensic des TROUS à travers toute une relation parente (EuroVelo) : coûte l'historique de chaque sous-relation et de chaque chemin (plus de 1 000 appels). La frise de la relation parente seule (sa structure) est faite
 - Positions passées des nœuds (nœuds supprimés ou déplacés depuis) : un appel d'historique par nœud
 - Sélection d'une zone sur la carte avec l'historique des éléments (idée de l'utilisateur, à mesurer avec `changesets?bbox=`)
 - Contrôles à la Knooppuntnet : `access`, `oneway`, tags attendus, rôles adaptés au type de relation
@@ -39,6 +39,7 @@ Taille (estimation grossière) : S = moins d'une heure, M = quelques heures, L =
 - Polygones : bouts non raccordés classés libre, posé sur le milieu d'un chemin, embranchement ; liste A, B, A = un trou (trous = morceaux - 1, mesuré sur 8 relations) (21/10/2026)
 - Fond de carte : tuiles décalées en zoomant corrigées (21/10/2026, voir CLAUDE.md)
 - Tickets #4, #21, #22 (frise) : heure UTC à la seconde partout, adresse avec heure (`du=AAAA-MM-JJThh:mm:ssZ`), bouton « Analyser cette période exacte » sur chaque rupture, bulle de la frise avec toutes les versions proches et leurs membres ajoutés ou retirés
+- Ticket #15 (23/10/2026) : la frise et la fenêtre sur les modifications s'appliquent aussi à une relation faite de sous-relations (14234324 : v23 à v25, +3 membres), sans descendre dans les sous-relations
 - Ticket #20 : périodes de membres mélangés (problème d'ordre sans trou) dans la frise (bandes orange) et la liste de l'enquête, mesuré sur 17032107 : du 2026-10-09 (v16, Cavokld) au 2026-10-23 (v17, pyrog), comme KPN
 - Tickets #17 à #19 (22/10/2026) : relation inexistante ou supprimée avec un message clair (`checkRoot` dans `osmapi.js`), sous-relation supprimée ignorée, relation sans chemin dessinée avec ses nœuds membres. Reste de #18 : analyser une relation supprimée sur ses versions d'avant
 - Contenu d'un polygone (21/10/2026, `contenu.js`, `ui-contenu.js`) : bouton sous les statistiques d'un polygone, éléments étiquetés regroupés par type (Orangerie 274225 : 3 176 arbres, 177 bancs, 5 aires de jeux, identique à la mesure du 18/10), points dessinés sur la carte ; zone limitée à 6 requêtes de 0,25 degré carré, Paris refusé par l'API (plus de 50 000 éléments), état actuel seulement

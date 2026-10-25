@@ -95,10 +95,9 @@
   async function setupFrise(id, prev) {
     var zone = $('frise-zone');
     var rel = state.live.snapshot.elements.filter(function (e) { return e.type === 'relation' && e.id === id; })[0];
-    if (!rel || !rel.members.some(function (m) { return m.type === 'way'; })) {
+    if (!rel || !rel.members.some(function (m) { return m.type === 'way' || m.type === 'relation'; })) {
       state.frise = null;
-      zone.innerHTML = '<p class="detail">La frise s\'applique à une relation qui contient directement des chemins. '
-        + 'Pour une relation parente (par exemple EuroVelo), saisissez le numéro d\'une de ses sous-relations.</p>';
+      zone.innerHTML = '<p class="detail">La frise s\'applique à une relation qui contient des chemins ou des sous-relations.</p>';
       return null;
     }
     var fr = prev, max = nowIso();

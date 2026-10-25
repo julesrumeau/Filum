@@ -19,7 +19,7 @@ Quelques relations pour essayer :
 | 2952375 | Sentier Stanislas-Kléber : 1 022 chemins, 5 trous aujourd'hui, une histoire riche (la frise est utile ici) |
 | 7444 | Paris, limite administrative : un polygone, contour fermé |
 | 274225 | Parc de l'Orangerie à Strasbourg : un multipolygone simple (un contour, sept trous) |
-| 12586521 | EuroVelo 15, relation parente de 148 étapes : arbre et tracé, mais pas la frise |
+| 12586521 | EuroVelo 15, relation parente de 148 étapes : arbre, tracé et frise de sa propre structure |
 
 ### Ce que vous voyez
 
@@ -51,7 +51,7 @@ Un nœud déplacé ne casse donc rien, puisque seul compte l'identifiant. Voir �
 ## Limites connues
 
 - **Résultats non validés.** Les faits affichés (quelle version, quel auteur, quels nœuds retirés) se vérifient sur openstreetmap.org, et un cas a été contrôlé en détail (relation 2952375). Rien n'a été confronté à une vérité connue sur d'autres relations. Une modification au moment d'une rupture n'est pas forcément une faute : la personne a pu réparer ou raccrocher un autre chemin, et un gros changeset peut n'avoir aucun rapport avec la relation.
-- **La frise ne marche que pour une relation qui contient directement des chemins**, pas pour une relation parente comme EuroVelo : le bouton « Enquêter » de la ligne « Où sont les trous » ouvre la sous-relation cassée avec sa frise.
+- **Sur une relation parente (EuroVelo, La Routo 14234324)**, la frise suit les changements de la relation elle-même (sous-relations ajoutées ou retirées, tags), sans descendre dans les sous-relations : pour les trous d'une étape, le bouton « Enquêter » de la ligne « Où sont les trous » ouvre la sous-relation cassée avec sa frise.
 - **La géométrie n'est pas suivie.** Déplacer un nœud, ou en ajouter ou en retirer au milieu d'un chemin, n'est pas signalé comme un changement de forme.
 - **Positions passées approximatives.** À une date passée, un ancien chemin est dessiné avec des trous là où ses nœuds ont été supprimés depuis. Les sous-relations ne sont pas reconstituées à une date.
 - **Pas encore gérés** : schéma de transport v2, parcours de santé, ordre des arrêts de bus et nœuds membres (ils sont affichés, mais leur ordre n'est pas vérifié), analyse d'un parc qui n'est qu'un chemin fermé sans relation.

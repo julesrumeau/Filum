@@ -211,3 +211,16 @@ test('memberChange : membres ajoutés, retirés ou au rôle changé par une vers
   assert.deepStrictEqual(c1.added.map(x => x.ref), [1, 2]);
   assert.strictEqual(memberChange(hist, 9), null);
 });
+
+test('relation parente (que des sous-relations) : les membres relations ajoutés ou retirés sont listés (ticket 15)', () => {
+  const sub = (ref) => ({ type: 'relation', ref, role: '' });
+  const c = {
+    relHistory: [rv(1, T('2020-01-01'), [sub(7), sub(8)]), rv(2, T('2022-06-01'), [sub(7), sub(9)])],
+    wayHistories: {}, currentWays: {},
+  };
+  const ev = windowChanges(c, 100, T('2022-01-01'), T('2023-01-01'));
+  const e = find(ev, 'relation', 100, 'modified')[0];
+  assert.ok(e, 'la relation parente a un événement');
+  assert.deepStrictEqual(e.members.addedList.map(m => m.type + m.ref), ['relation9']);
+  assert.deepStrictEqual(e.members.removedList.map(m => m.type + m.ref), ['relation8']);
+});
