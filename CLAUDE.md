@@ -145,3 +145,5 @@ Frise et heures : `?du=` et `?au=` acceptent une date seule (journée entière) 
 Membres mélangés (ticket 20) : `timeline` ajoute `mixed` (orderIssues > 0) à chaque point, `spansOf(points, 'mixed')` donne les périodes (le défaut reste les trous). Frise : bandes orange en bas ; enquête : section « Membres mélangés ». Pas encore dans la bulle de la frise.
 
 Relation parente (ticket 15) : `setupFrise` accepte une relation qui contient des chemins OU des sous-relations. Pour une relation faite de sous-relations seulement, la frise suit son historique propre (membres ajoutés ou retirés, tags) sans lire celui des sous-relations ; le calcul des trous reste sur les chemins directs (aucun). Vérifié sur 14234324 (24 sous-relations, 25 versions).
+
+Compteur de visites (23/10/2026) : GoatCounter (`filum.goatcounter.com`), balise dans `<head>` de `index.html`, comme Scopus. Sans cookie. Seule dépendance externe hors API OSM et tuiles. L'adresse `//gc.zgo.at` sans protocole ne se charge pas depuis `file://` (échec silencieux, sans effet sur la page).

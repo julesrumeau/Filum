@@ -62,7 +62,7 @@ Un nœud déplacé ne casse donc rien, puisque seul compte l'identifiant. Voir �
 
 ## Données et politique d'usage
 
-Les données viennent de l'[API publique d'OpenStreetMap](https://api.openstreetmap.org), appelée directement depuis votre navigateur. Rien ne passe par un serveur de Filum. Une analyse simple coûte une quinzaine d'appels. Lire l'historique complet d'une grande relation en demande environ un par chemin (environ 1 000 pour 2952375) : Filum les envoie par pages de 80, 8 à la fois, avec une pause possible. Merci de ne pas le lancer en boucle sur de grosses relations.
+Les données viennent de l'[API publique d'OpenStreetMap](https://api.openstreetmap.org), appelée directement depuis votre navigateur. Rien ne passe par un serveur de Filum. Une analyse simple coûte une quinzaine d'appels. Lire l'historique complet d'une grande relation en demande environ un par chemin (environ 1 000 pour 2952375) : Filum les envoie par pages de 80, 8 à la fois, avec une pause possible. Merci de ne pas le lancer en boucle sur de grosses relations. Le site publié compte ses visites avec [GoatCounter](https://www.goatcounter.com) (sans cookie, sans donnée personnelle).
 
 Données © contributeurs OpenStreetMap, sous licence [ODbL](https://www.openstreetmap.org/copyright).
 
