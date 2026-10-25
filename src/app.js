@@ -112,6 +112,8 @@
 
   $('stats').addEventListener('click', function (e) {
     if (e.target.closest('#btn-contenu')) U.chercherContenu();
+    var piece = e.target.closest('button[data-piece]');
+    if (piece) U.select('piece:' + piece.dataset.rel + ':' + piece.dataset.piece, { fromMap: false, fit: true });
   });
   $('trous').addEventListener('click', function (e) {
     var seule = e.target.closest('button[data-seule]');

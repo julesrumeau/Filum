@@ -78,3 +78,22 @@ test('pieceStats : chemins, nœuds et longueur de chaque morceau (ticket 3)', ()
   assert.deepStrictEqual(ps.map(p => [p.ways, p.nodes]), [[2, 3], [1, 2]]);
   assert.ok(Math.abs(ps[0].km - 222.4) < 0.5 && Math.abs(ps[1].km - 111.2) < 0.5);
 });
+
+const { pieceWayRefs } = require('../src/stats.js');
+
+test('pieceStats : un morceau dont tous les bouts se raccordent est une boucle (ticket 3)', () => {
+  const loop = { elements: [W(1, [1, 2, 3]), W(2, [3, 4, 1]), R(100, [m('way', 1), m('way', 2)])] };
+  assert.strictEqual(pieceStats(loop, { relationId: 100, pieces: [[0, 1]] }, {})[0].closed, true);
+  const open = { elements: [W(1, [1, 2, 3]), W(2, [3, 4, 5]), R(100, [m('way', 1), m('way', 2)])] };
+  assert.strictEqual(pieceStats(open, { relationId: 100, pieces: [[0, 1]] }, {})[0].closed, false);
+  const self = { elements: [W(1, [1, 2, 3, 1]), R(100, [m('way', 1)])] };
+  assert.strictEqual(pieceStats(self, { relationId: 100, pieces: [[0]] }, {})[0].closed, true);
+});
+
+test('pieceWayRefs : les chemins d\'un morceau, sans doublon (ticket 3)', () => {
+  const snap = { elements: [W(1, [1, 2]), W(2, [2, 3]), W(3, [3, 4]), R(100, [m('way', 1), m('way', 2), m('way', 1), m('way', 3)])] };
+  const res = { relationId: 100, pieces: [[0, 1, 2], [3]] };
+  assert.deepStrictEqual(pieceWayRefs(snap, res, 0), [1, 2]);
+  assert.deepStrictEqual(pieceWayRefs(snap, res, 1), [3]);
+  assert.deepStrictEqual(pieceWayRefs(snap, res, 5), []);
+});

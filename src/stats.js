@@ -92,11 +92,30 @@
         seen[w.id] = true; ways.push(w);
         w.nodes.forEach(function (n) { nodeSet[n] = true; });
       });
-      return { ways: ways.length, nodes: Object.keys(nodeSet).length, km: sumKm(ways, nodes) };
+      return { ways: ways.length, nodes: Object.keys(nodeSet).length, km: sumKm(ways, nodes), closed: isLoop(ways) };
     });
   }
 
-  var api = { relationLengths: relationLengths, pieceStats: pieceStats, structureStats: structureStats, wayLengthKm: wayLengthKm, lengthStats: lengthStats };
+  // Un morceau est une boucle si chaque nœud y reçoit un nombre pair de bouts de chemins (rien ne reste ouvert).
+  function isLoop(ways) {
+    var degree = {};
+    ways.forEach(function (w) {
+      [w.nodes[0], w.nodes[w.nodes.length - 1]].forEach(function (n) { degree[n] = (degree[n] || 0) + 1; });
+    });
+    return ways.length > 0 && Object.keys(degree).every(function (n) { return degree[n] % 2 === 0; });
+  }
+
+  // Les chemins (identifiants, sans doublon) du morceau numéro k d'un résultat d'analyse.
+  function pieceWayRefs(snapshot, result, k) {
+    var idx = index(snapshot), rel = idx.rels[result.relationId], seen = {}, out = [];
+    ((result.pieces || [])[k] || []).forEach(function (i) {
+      var mb = rel && rel.members[i];
+      if (mb && mb.type === 'way' && idx.ways[mb.ref] && !seen[mb.ref]) { seen[mb.ref] = true; out.push(mb.ref); }
+    });
+    return out;
+  }
+
+  var api = { pieceWayRefs: pieceWayRefs, relationLengths: relationLengths, pieceStats: pieceStats, structureStats: structureStats, wayLengthKm: wayLengthKm, lengthStats: lengthStats };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.Filum = Object.assign(root.Filum || {}, api);
 })(typeof self !== 'undefined' ? self : this);

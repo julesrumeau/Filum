@@ -21,7 +21,13 @@
 
   // Chemins concernés par une sélection : le chemin lui-même, ou les deux chemins de part et d'autre d'un trou.
   function selectedWays(sel) {
-    var ways = {}, path = sel && targetNode(sel);
+    var ways = {}, q = sel && parseSel(sel);
+    if (q && q.kind === 'piece') {
+      var res = state.results.filter(function (r) { return r.relationId === q.id; })[0];
+      if (res) F.pieceWayRefs(state.snapshot, res, q.index).forEach(function (ref) { ways[ref] = true; });
+      return ways;
+    }
+    var path = sel && targetNode(sel);
     if (path) {
       var t = path[path.length - 1];
       if (t.kind === 'way') ways[t.id] = true;
@@ -81,6 +87,15 @@
     if (rows.length) rows[0].scrollIntoView({ block: 'center', behavior: 'smooth' });
   }
 
+  // Cadre la carte sur l'ensemble des traits en surbrillance (un morceau entier).
+  function fitSelected() {
+    var xs = [], ys = [];
+    Array.prototype.forEach.call($('carte').querySelectorAll('polyline.voie.sel'), function (line) {
+      line.getAttribute('points').split(' ').forEach(function (pt) { var c = pt.split(','); xs.push(Number(c[0])); ys.push(Number(c[1])); });
+    });
+    if (xs.length && state.map) state.map.fit(Math.min.apply(null, xs), Math.min.apply(null, ys), Math.max.apply(null, xs), Math.max.apply(null, ys));
+  }
+
   function select(sel, opts) {
     state.selected = sel;
     highlightMap(sel);
@@ -93,6 +108,7 @@
       if (c && state.map) state.map.focus(Number(c.getAttribute('cx')), Number(c.getAttribute('cy')));
       var sq = sel && $('carte').querySelector('rect[data-sel="' + sel + '"]');
       if (sq && state.map) state.map.focus(Number(sq.getAttribute('data-cx')), Number(sq.getAttribute('data-cy')));
+      if (sel && sel.indexOf('piece:') === 0 && opts && opts.fit) fitSelected();
       var line = sel && sel.indexOf('way:') === 0 && $('carte').querySelector('polyline.voie[data-way="' + sel.slice(4) + '"]');
       if (line && state.map && opts && opts.fit) { // Maj+clic : cadrer le chemin ; un clic simple le met seulement en évidence
         var xs = [], ys = [];

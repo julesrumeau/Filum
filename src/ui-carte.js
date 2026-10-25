@@ -41,7 +41,9 @@
     var res = state.results.filter(function (r) { return r.relationId === relId; })[0];
     if (!res || res.isPolygon || res.pieces.length < 2) return [];
     var lines = F.pieceStats(state.snapshot, res, state.nodes).map(function (p, k) {
-      return '<span class="pastille-morceau sw' + (k % 6) + '"></span> morceau ' + (k + 1) + ' : ' + p.ways + ' chemin(s), ' + p.nodes + ' nœud(s), ' + fmtKm(p.km);
+      return '<button class="morceau" data-piece="' + k + '" data-rel="' + res.relationId + '" title="Mettre ce morceau en évidence sur la carte">'
+        + '<span class="pastille-morceau sw' + (k % 6) + '"></span> morceau ' + (k + 1) + '</button> : ' + p.ways + ' chemin(s), ' + p.nodes + ' nœud(s), '
+        + fmtKm(p.km) + (p.closed ? ' · boucle fermée' : '');
     });
     return ['Morceaux (séparés par un trou) :<br>' + lines.join('<br>')];
   }
