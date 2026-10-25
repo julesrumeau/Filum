@@ -55,3 +55,26 @@ test('lengthStats : longueur totale (chaque chemin une fois), plus long chemin, 
   assert.strictEqual(l.longest.id, 2);
   assert.strictEqual(l.noPosition, 1);
 });
+
+const { relationLengths, pieceStats } = require('../src/stats.js');
+// Un degré de latitude fait environ 111,19 km.
+const POS = { 10: { lat: 0, lon: 0 }, 11: { lat: 1, lon: 0 }, 12: { lat: 2, lon: 0 }, 13: { lat: 3, lon: 0 } };
+
+test('relationLengths : membres, chemins et longueur de chaque relation de l\'arbre (ticket 9)', () => {
+  const snap = { elements: [W(1, [10, 11]), W(2, [11, 12]), W(3, [12, 13]),
+    R(200, [m('way', 1), m('way', 2)], { name: 'A' }), R(201, [m('way', 3)], { name: 'B' }),
+    R(100, [m('relation', 200), m('relation', 201)], { name: 'Racine' })] };
+  const rows = relationLengths(snap, 100, POS);
+  assert.deepStrictEqual(rows.map(r => [r.id, r.members, r.ways]), [[100, 2, 3], [200, 2, 2], [201, 1, 1]]);
+  assert.ok(Math.abs(rows[0].km - 333.6) < 0.5, 'racine : 3 degrés');
+  assert.ok(Math.abs(rows[1].km - 222.4) < 0.5);
+  assert.strictEqual(rows[1].name, 'A');
+});
+
+test('pieceStats : chemins, nœuds et longueur de chaque morceau (ticket 3)', () => {
+  const snap = { elements: [W(1, [10, 11]), W(2, [11, 12]), W(3, [12, 13]), R(100, [m('way', 1), m('way', 2), m('way', 3)])] };
+  const res = { relationId: 100, pieces: [[0, 1], [2]] };
+  const ps = pieceStats(snap, res, POS);
+  assert.deepStrictEqual(ps.map(p => [p.ways, p.nodes]), [[2, 3], [1, 2]]);
+  assert.ok(Math.abs(ps[0].km - 222.4) < 0.5 && Math.abs(ps[1].km - 111.2) < 0.5);
+});

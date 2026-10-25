@@ -25,6 +25,27 @@
     renderMap(result);
   }
 
+  // Une ligne par relation de l'arbre : membres, chemins, longueur (pour repérer celles à redécouper).
+  function lengthRows(relId) {
+    var list = F.relationLengths(state.snapshot, relId, state.nodes);
+    if (list.length < 2) return [];
+    var lines = list.slice(0, 12).map(function (r) {
+      return osmLink('relation', r.id) + (r.name ? ' ' + esc(r.name) : '') + ' : ' + r.members + ' membre(s), ' + r.ways + ' chemin(s), ' + fmtKm(r.km);
+    });
+    if (list.length > 12) lines.push('et ' + (list.length - 12) + ' autre(s) relation(s)');
+    return ['Longueur de chaque relation :<br>' + lines.join('<br>')];
+  }
+
+  // Morceaux de la relation (hors polygones), avec la couleur qu'ils ont sur la carte.
+  function pieceRows(relId) {
+    var res = state.results.filter(function (r) { return r.relationId === relId; })[0];
+    if (!res || res.isPolygon || res.pieces.length < 2) return [];
+    var lines = F.pieceStats(state.snapshot, res, state.nodes).map(function (p, k) {
+      return '<span class="pastille-morceau sw' + (k % 6) + '"></span> morceau ' + (k + 1) + ' : ' + p.ways + ' chemin(s), ' + p.nodes + ' nœud(s), ' + fmtKm(p.km);
+    });
+    return ['Morceaux (séparés par un trou) :<br>' + lines.join('<br>')];
+  }
+
   // Taille de la relation affichée : de quoi décider de la redécouper.
   function renderStats(relId) {
     var box = $('stats');
@@ -39,6 +60,7 @@
       'Relations les plus chargées : ' + st.biggest.map(function (r) {
         return osmLink('relation', r.id) + (r.name ? ' ' + esc(r.name) : '') + ' (' + r.members + ' membres)';
       }).join(', ')];
+    rows = rows.concat(lengthRows(relId), pieceRows(relId));
     if (members > 300) rows.push('<span class="erreur">La relation a ' + members + ' membres : au-delà de quelques centaines, une relation devient difficile à éditer et à vérifier. Les bonnes pratiques OSM conseillent de la découper en sous-relations.</span>');
     box.innerHTML = '<details><summary>Statistiques de la relation</summary><div class="stats">' + rows.join('<br>') + '</div></details>';
     var res = state.results.filter(function (r) { return r.relationId === relId; })[0];

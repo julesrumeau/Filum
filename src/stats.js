@@ -67,7 +67,36 @@
     return { totalKm: total, longest: longest, noPosition: noPosition };
   }
 
-  var api = { structureStats: structureStats, wayLengthKm: wayLengthKm, lengthStats: lengthStats };
+  function sumKm(ways, nodes) {
+    return ways.reduce(function (t, w) { return t + wayLengthKm(w.nodes, nodes); }, 0);
+  }
+
+  // Une ligne par relation de l'arbre (la racine d'abord) : membres, chemins uniques et longueur de ses chemins
+  // (sous-relations comprises, chaque chemin une fois), à partir des positions chargées.
+  function relationLengths(snapshot, rootId, nodes) {
+    var idx = index(snapshot);
+    return walk(idx, rootId).rels.map(function (rel) {
+      var sub = walk(idx, rel.id);
+      return { id: rel.id, name: (rel.tags && rel.tags.name) || null, members: rel.members.length, ways: sub.ways.length, km: sumKm(sub.ways, nodes) };
+    });
+  }
+
+  // Un morceau est un ensemble de membres reliés (result.pieces : indices de membres) : chemins, nœuds distincts, longueur.
+  function pieceStats(snapshot, result, nodes) {
+    var idx = index(snapshot), rel = idx.rels[result.relationId];
+    return result.pieces.map(function (piece) {
+      var ways = [], seen = {}, nodeSet = {};
+      piece.forEach(function (i) {
+        var mb = rel && rel.members[i], w = mb && mb.type === 'way' && idx.ways[mb.ref];
+        if (!w || seen[w.id]) return;
+        seen[w.id] = true; ways.push(w);
+        w.nodes.forEach(function (n) { nodeSet[n] = true; });
+      });
+      return { ways: ways.length, nodes: Object.keys(nodeSet).length, km: sumKm(ways, nodes) };
+    });
+  }
+
+  var api = { relationLengths: relationLengths, pieceStats: pieceStats, structureStats: structureStats, wayLengthKm: wayLengthKm, lengthStats: lengthStats };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.Filum = Object.assign(root.Filum || {}, api);
 })(typeof self !== 'undefined' ? self : this);
