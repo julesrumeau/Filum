@@ -431,5 +431,14 @@ test('buildTree : un contour fermé de plusieurs chemins donne début, milieu et
     R(100, [m('way', 2, 'outer'), m('way', 1, 'outer'), m('way', 3, 'outer'), m('way', 4, 'outer')], { type: 'multipolygon' }),
   ] }, 100);
   const loops = t.children.map(c => c.loop && c.loop.kind + ':' + c.loop.pos + '/' + c.loop.size);
-  assert.deepStrictEqual(loops, ['ring:1/3', 'ring:3/3', 'ring:2/3', undefined]);
+  assert.deepStrictEqual(loops, ['ring:1/3', 'ring:2/3', 'ring:3/3', undefined], 'rang selon l\'ordre de la liste, pas selon le tour du contour');
+});
+
+test('buildTree : le rang dans un contour suit l\'ordre de la liste pour que le rail soit continu (retour de pyrog, ticket 1)', () => {
+  // contour 1 -> 2 -> 3 -> 1 mais listé dans l'ordre 1, 3, 2 (comme les chemins 296576721, 86298926, 86297905 de 19876654)
+  const t = buildTree({ elements: [
+    W(1, [1, 2]), W(2, [2, 3]), W(3, [3, 1]),
+    R(100, [m('way', 1, 'outer'), m('way', 3, 'outer'), m('way', 2, 'outer')], { type: 'multipolygon' }),
+  ] }, 100);
+  assert.deepStrictEqual(t.children.map(c => c.loop.kind + ':' + c.loop.pos + '/' + c.loop.size), ['ring:1/3', 'ring:2/3', 'ring:3/3']);
 });

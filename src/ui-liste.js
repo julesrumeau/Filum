@@ -178,7 +178,9 @@
     if (!loop) return '';
     if (loop.kind === 'self') return '<span class="rail rail-seul" title="Chemin fermé sur lui-même"></span>';
     var where = loop.pos === 1 ? ['debut', 'début'] : loop.pos === loop.size ? ['fin', 'fin'] : ['milieu', 'suite'];
-    return '<span class="rail rail-' + where[0] + '" title="Contour fermé de ' + loop.size + ' chemins : ' + where[1] + ' (' + loop.pos + ' sur ' + loop.size + ')"></span>';
+    var title = 'Contour fermé de ' + loop.size + ' chemins : ' + where[1] + ' (' + loop.pos + ' sur ' + loop.size + ')';
+    // Deux rails, à gauche et à droite : le contour se referme sur lui-même, comme dans l'éditeur de JOSM.
+    return '<span class="rail rail-' + where[0] + '" title="' + title + '"></span><span class="rail rail-d rail-' + where[0] + '" title="' + title + '"></span>';
   }
 
   function nodeHtml(n, open) {

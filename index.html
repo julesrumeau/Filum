@@ -24,10 +24,13 @@
   svg.osmc { vertical-align:middle; margin:0 4px; }
   button.morceau { font:inherit; background:none; border:1px solid var(--bord); border-radius:4px; padding:0 6px; cursor:pointer; color:inherit; }
   svg .voie.removed { stroke:var(--alerte); stroke-width:7; stroke-dasharray:8 5; }
-  .feuille { position:relative; }
+  .feuille { position:relative; padding-right:14px; }
   .rail { position:absolute; left:2px; top:0; bottom:0; width:8px; border-left:2px solid var(--trace); pointer-events:none; }
   .rail-debut { top:50%; border-top:2px solid var(--trace); border-top-left-radius:8px; }
   .rail-fin { bottom:50%; border-bottom:2px solid var(--trace); border-bottom-left-radius:8px; }
+  .rail-d { left:auto; right:2px; border-left:0; border-right:2px solid var(--trace); }
+  .rail-d.rail-debut { border-top-left-radius:0; border-top-right-radius:8px; }
+  .rail-d.rail-fin { border-bottom-left-radius:0; border-bottom-right-radius:8px; }
   .rail-seul { left:1px; top:50%; bottom:auto; width:8px; height:8px; margin-top:-4px; border:2px solid var(--trace); border-radius:50%; }
   label.mineurs { display:flex; align-items:flex-start; gap:6px; }
   label.mineurs input { margin:3px 0 0; }

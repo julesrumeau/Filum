@@ -195,13 +195,18 @@
       if (w && w.nodes.length > 2 && w.nodes[0] === w.nodes[w.nodes.length - 1]) out[mb.ref] = { kind: 'self' };
     });
     if (!isPolygon) return out;
-    var wm = [];
-    rel.members.forEach(function (mb) {
-      if (mb.type === 'way' && ways[mb.ref]) wm.push({ ref: mb.ref, role: mb.role || '', nodes: ways[mb.ref].nodes });
+    var wm = [], firstIndex = {};
+    rel.members.forEach(function (mb, i) {
+      if (mb.type === 'way' && ways[mb.ref]) {
+        wm.push({ ref: mb.ref, role: mb.role || '', nodes: ways[mb.ref].nodes });
+        if (firstIndex[mb.ref] === undefined) firstIndex[mb.ref] = i;
+      }
     });
     R.buildRings(wm).forEach(function (ring) {
       if (!ring.closed || ring.ways.length < 2) return;
-      ring.ways.forEach(function (ref, k) { out[ref] = { kind: 'ring', pos: k + 1, size: ring.ways.length }; });
+      // Le rang suit l'ordre de la LISTE des membres (pas le tour du contour), pour que le rail se suive de ligne en ligne.
+      var order = ring.ways.slice().sort(function (a, b) { return firstIndex[a] - firstIndex[b]; });
+      order.forEach(function (ref, k) { out[ref] = { kind: 'ring', pos: k + 1, size: order.length }; });
     });
     return out;
   }
