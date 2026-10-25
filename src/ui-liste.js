@@ -162,8 +162,8 @@
     }
     if (n.kind === 'way') {
       if (n.missing) return 'chemin ' + osmLink('way', n.id) + ' absent des données chargées' + role;
-      return (n.border ? '<span class="pastille mauvais" title="Bord d\'un trou"></span>' : '<span class="pastille vide"></span>')
-        + 'chemin ' + osmLink('way', n.id) + (n.name ? ' ' + esc(n.name) : '') + loopHtml(n.loop) + role
+      return railHtml(n.loop) + (n.border ? '<span class="pastille mauvais" title="Bord d\'un trou"></span>' : '<span class="pastille vide"></span>')
+        + 'chemin ' + osmLink('way', n.id) + (n.name ? ' ' + esc(n.name) : '') + role
         + ' <span class="detail">' + n.nodeCount + ' nœuds (' + n.ends[0] + ' à ' + n.ends[1] + ') · ' + metaText(n)
         + (n.border ? ' · bord d\'un trou' : '') + '</span>' + notesHtml(n);
     }
@@ -172,13 +172,13 @@
       + (n.what ? ' <span class="detail">' + esc(n.what) + '</span>' : (n.loaded ? '' : ' <span class="detail">(non chargé)</span>'));
   }
 
-  // Icône de bouclage : chemin fermé sur lui-même, ou début, suite, fin d'un contour fermé de plusieurs chemins.
-  function loopHtml(loop) {
+  // Rail de bouclage dans la marge gauche : un trait vertical qui relie les chemins d'un contour fermé (coin haut au
+  // début, coin bas à la fin), ou un petit rond pour un chemin fermé sur lui-même. Les lignes se touchent, le trait se suit.
+  function railHtml(loop) {
     if (!loop) return '';
-    if (loop.kind === 'self') return ' <span class="boucle" title="Chemin fermé sur lui-même">&#10226;</span>';
-    var where = loop.pos === 1 ? ['&sub;', 'début'] : loop.pos === loop.size ? ['&sup;', 'fin'] : ['=', 'suite'];
-    return ' <span class="boucle" title="Contour fermé de ' + loop.size + ' chemins : ' + where[1] + ' (' + loop.pos + ' sur ' + loop.size + ')">'
-      + '<span class="boucle-r">' + where[0] + '</span></span>';
+    if (loop.kind === 'self') return '<span class="rail rail-seul" title="Chemin fermé sur lui-même"></span>';
+    var where = loop.pos === 1 ? ['debut', 'début'] : loop.pos === loop.size ? ['fin', 'fin'] : ['milieu', 'suite'];
+    return '<span class="rail rail-' + where[0] + '" title="Contour fermé de ' + loop.size + ' chemins : ' + where[1] + ' (' + loop.pos + ' sur ' + loop.size + ')"></span>';
   }
 
   function nodeHtml(n, open) {
