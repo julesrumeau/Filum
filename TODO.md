@@ -39,6 +39,7 @@ Taille (estimation grossière) : S = moins d'une heure, M = quelques heures, L =
 - Polygones : bouts non raccordés classés libre, posé sur le milieu d'un chemin, embranchement ; liste A, B, A = un trou (trous = morceaux - 1, mesuré sur 8 relations) (21/10/2026)
 - Fond de carte : tuiles décalées en zoomant corrigées (21/10/2026, voir CLAUDE.md)
 - Tickets #4, #21, #22 (frise) : heure UTC à la seconde partout, adresse avec heure (`du=AAAA-MM-JJThh:mm:ssZ`), bouton « Analyser cette période exacte » sur chaque rupture, bulle de la frise avec toutes les versions proches et leurs membres ajoutés ou retirés
+- Tickets #24 (résumé de période : membres ajoutés ou retirés de la relation) et #25 (message de carte quand la période ne touche aucun chemin), 25/10/2026
 - Ticket #6 (25/10/2026) : balisage `osmc:symbol` dessiné à côté du nom de la relation (`src/osmc.js`, couleurs de la liste connue seulement), vérifié sur GR 534 (losange rouge) et GR 965 (blanc et rouge, numéro)
 - Tickets #9 et #3 (partie liste, 23/10/2026) : longueur de chaque relation et liste des morceaux (chemins, nœuds, longueur, couleur de la carte) dans les statistiques ; 13668305 : 211, 87 et 113 km comme pyrog. Reste de #3 : clic sur un morceau pour le mettre en évidence
 - Ticket #14 (23/10/2026) : changements de tags en vert (+ ajout), orange (~ modification), rouge (− retrait), avec un signe en plus de la couleur

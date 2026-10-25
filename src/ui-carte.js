@@ -112,7 +112,13 @@
     });
     // Une relation sans chemin (parcours de santé, arrêts seuls) se dessine avec ses nœuds membres.
     if (!pts.length && !state.window) pts = memberNodeRows(result.relationId).filter(function (n) { return typeof n.lat === 'number'; });
-    if (!pts.length) { $('carte').innerHTML = '<p>Aucune géométrie à afficher.</p>'; return; }
+    if (!pts.length) {
+      var untouched = state.window && !visibleWayRefs(result.relationId).length;
+      $('carte').innerHTML = '<p>' + (untouched
+        ? 'Aucun chemin de cette relation n\'a été modifié pendant la période : rien à dessiner. Choisissez la période complète pour voir le tracé.'
+        : 'Aucune géométrie à afficher.') + '</p>';
+      return;
+    }
     var minLat = Math.min.apply(null, pts.map(function (p) { return p.lat; }));
     var maxLat = Math.max.apply(null, pts.map(function (p) { return p.lat; }));
     var minLon = Math.min.apply(null, pts.map(function (p) { return p.lon; }));

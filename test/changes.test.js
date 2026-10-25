@@ -231,3 +231,16 @@ test('tagChangeKind : ajout, modification ou retrait d\'un tag (ticket 14)', () 
   assert.strictEqual(tagChangeKind({ key: 'a', before: '1', after: '2' }), 'modif');
   assert.strictEqual(tagChangeKind({ key: 'a', before: '1', after: undefined }), 'retrait');
 });
+
+test('relationChangeSummary : versions, membres ajoutés et retirés, changements de tags de la relation (ticket 24)', () => {
+  const { relationChangeSummary } = require('../src/changes.js');
+  const sub = (ref) => ({ type: 'relation', ref, role: '' });
+  const c = {
+    relHistory: [rv(1, T('2020-01-01'), [sub(7), sub(8)]), rv(2, T('2022-06-01'), [sub(7), sub(9), sub(10)], { tags: { type: 'route', ref: 'X' } }),
+      rv(3, T('2022-07-01'), [sub(7), sub(9)])],
+    wayHistories: {}, currentWays: {},
+  };
+  const ev = windowChanges(c, 100, T('2022-01-01'), T('2023-01-01'));
+  assert.deepStrictEqual(relationChangeSummary(ev, 100), { versions: 2, added: 2, removed: 2, tags: 2 });
+  assert.deepStrictEqual(relationChangeSummary([], 100), { versions: 0, added: 0, removed: 0, tags: 0 });
+});

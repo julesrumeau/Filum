@@ -346,6 +346,14 @@
     }
   }
 
+  // Une phrase sur ce que la relation elle-même a changé (membres ajoutés ou retirés, tags), vide si rien.
+  function relationChangeText(events, relId) {
+    var s = F.relationChangeSummary(events, relId);
+    if (!s.versions) return '';
+    return 'La relation a changé ' + s.versions + ' fois : +' + s.added + ' et −' + s.removed + ' membre(s)'
+      + (s.tags ? ', tags modifiés ' + s.tags + ' fois' : '') + '. ';
+  }
+
   async function showWindow(fr) {
     var events = F.windowChanges(fr.ctx, fr.relId, fr.from, fr.to), snap, results, tree, minor = 0;
     if (state.hideMinor && fr.points) {
@@ -368,6 +376,7 @@
     $('resume').textContent = 'Période du ' + fmtDateTime(fr.from) + ' au ' + (fr.toIsMax ? 'aujourd\'hui' : fmtDateTime(fr.to)) + ' : '
       + shownCount + ' élément(s) touché(s) affiché(s), ' + wtree.hiddenCount + ' masqué(s) (non modifiés dans la période'
       + (minor ? ' ou seulement ' + minor + ' modification(s) sans effet sur la continuité' : '') + '). '
+      + relationChangeText(events, fr.relId)
       + 'État à la date de fin, relation complète : ' + (r ? r.gaps.length + ' trou(s), ' + r.pieces.length + ' morceau(x)' : 'inconnu') + '.';
     var pending = F.wayIdsToLoad(fr.ctx, fr.max).length;
     $('frise-note').className = pending ? 'erreur' : 'detail';
