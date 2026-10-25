@@ -70,6 +70,13 @@
     });
   }
 
+  // La relation demandée doit exister et ne pas être supprimée ; sinon un message qui dit pourquoi.
+  function checkRoot(rootId, rels) {
+    var root = rels.filter(function (r) { return r.id === rootId; })[0];
+    if (!root) throw new Error('La relation ' + rootId + ' n\'existe pas dans OpenStreetMap.');
+    if (root.visible === false) throw new Error('La relation ' + rootId + ' a été supprimée d\'OpenStreetMap (version ' + root.version + ').');
+  }
+
   // La relation, toutes ses sous-relations (niveau par niveau) et tous leurs chemins.
   // Pas de nœuds : la continuité n'a besoin que de la liste des nœuds de chaque chemin.
   async function fetchTree(rootId, get) {
@@ -79,8 +86,10 @@
     while (level.length) {
       level.forEach(function (id) { seen[id] = true; });
       var rels = await fetchBulk('relation', level, get);
+      if (level[0] === rootId && level.length === 1) checkRoot(rootId, rels);
       var next = {};
       rels.forEach(function (r) {
+        if (r.visible === false) return; // sous-relation supprimée depuis : ignorée
         elements.push(r);
         r.members.forEach(function (m) {
           if (m.type === 'relation' && !seen[m.ref]) next[m.ref] = true;

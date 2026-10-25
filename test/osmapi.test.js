@@ -443,3 +443,23 @@ test('fetchMap : une requête par case, résultats fusionnés sans doublon, born
   assert.deepStrictEqual(calls, ['map.json?bbox=7.000000,48.000000,7.100000,48.100000', 'map.json?bbox=7.100000,48.000000,7.200000,48.100000']);
   assert.deepStrictEqual(els.map(e => e.id).sort((a, b) => a - b), [1, 11, 12]);
 });
+
+test('relation inexistante : message clair (et non « absente de l\'instantané »)', async () => {
+  const api = fakeApi({});
+  await assert.rejects(fetchTree(20000, api.getJson), /relation 20000 n'existe pas dans OpenStreetMap/);
+});
+
+test('relation supprimée (visible: false) : message clair avec la dernière version, sans planter', async () => {
+  const api = fakeApi({ relation100: { type: 'relation', id: 100, visible: false, version: 4 } });
+  await assert.rejects(fetchTree(100, api.getJson), /relation 100 a été supprimée d'OpenStreetMap \(version 4\)/);
+});
+
+test('sous-relation supprimée : ignorée, le reste est analysé', async () => {
+  const db = {
+    relation1: R(1, [{ type: 'relation', ref: 2, role: '' }, { type: 'way', ref: 10, role: '' }]),
+    relation2: { type: 'relation', id: 2, visible: false, version: 3 },
+    way10: W(10, [100, 101]),
+  };
+  const snap = await fetchTree(1, fakeApi(db).getJson);
+  assert.deepStrictEqual(snap.elements.map(e => e.type + e.id).sort(), ['relation1', 'way10']);
+});

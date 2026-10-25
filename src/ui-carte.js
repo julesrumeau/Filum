@@ -88,6 +88,8 @@
       var p = ways[ref].nodes.map(function (n) { return nodes[n]; }).filter(function (n) { return n && typeof n.lat === 'number'; });
       if (p.length) { lines.push({ id: ref, pts: p, action: state.window ? state.window.ways[ref] : '' }); pts = pts.concat(p); }
     });
+    // Une relation sans chemin (parcours de santé, arrêts seuls) se dessine avec ses nœuds membres.
+    if (!pts.length && !state.window) pts = memberNodeRows(result.relationId).filter(function (n) { return typeof n.lat === 'number'; });
     if (!pts.length) { $('carte').innerHTML = '<p>Aucune géométrie à afficher.</p>'; return; }
     var minLat = Math.min.apply(null, pts.map(function (p) { return p.lat; }));
     var maxLat = Math.max.apply(null, pts.map(function (p) { return p.lat; }));
