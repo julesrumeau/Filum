@@ -411,3 +411,10 @@ test('buildTree : le résumé d\'un polygone sépare bouts libres, raccords au m
   ] }, 100);
   assert.deepStrictEqual([t.summary.openFree, t.summary.openMid, t.summary.openBranch], [1, 1, 0]);
 });
+
+test('relationLabel : stage ajoute « étape N », seul ou à la suite du libellé (ticket 10)', () => {
+  assert.strictEqual(relationLabel({ from: 'Metz', to: 'Nancy', stage: '3' }), 'Metz → Nancy (étape 3)');
+  assert.strictEqual(relationLabel({ name: 'GR 965', stage: '12' }), 'GR 965 (étape 12)');
+  assert.strictEqual(relationLabel({ stage: '4' }), 'étape 4');
+  assert.strictEqual(relationLabel({ from: 'A', to: 'B', stage: '' }), 'A → B');
+});

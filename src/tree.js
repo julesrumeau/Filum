@@ -220,9 +220,15 @@
       .sort(function (a, b) { return b.count - a.count || a.relationId - b.relationId; });
   }
 
-  // Libellé d'une relation : name (avec ref entre parenthèses), sinon départ → étapes → arrivée, sinon ref.
+  // Libellé d'une relation : name (avec ref entre parenthèses), sinon départ → étapes → arrivée, sinon ref ;
+  // le tag stage ajoute « (étape N) ». Le nom de la relation parente se lit dans l'arbre, où l'enfant est sous elle.
   function relationLabel(tags) {
-    var t = tags || {};
+    var t = tags || {}, label = baseLabel(t);
+    if (!t.stage) return label;
+    return label ? label + ' (étape ' + t.stage + ')' : 'étape ' + t.stage;
+  }
+
+  function baseLabel(t) {
     var name = t.name || t['name:fr'] || null;
     if (name) return t.ref && name.indexOf(t.ref) < 0 ? name + ' (' + t.ref + ')' : name;
     if (t.from && t.to) return [t.from, t.via, t.to].filter(Boolean).join(' → ');
