@@ -65,6 +65,15 @@
   }
 
   // ---- Frise : deux curseurs, début et fin de la période étudiée, sous la recherche ----
+  // Une seconde avant une date : la relation supprimée existe encore à cet instant.
+  function beforeIso(iso) { return new Date(new Date(iso).getTime() - 1000).toISOString().replace(/\.\d+Z$/, 'Z'); }
+
+  // Bord droit d'une période en toutes lettres : « au 2025-07-18 20:45:18 UTC », ou « jusqu'à aujourd'hui »
+  // (« jusqu'à la suppression » pour une relation supprimée) quand il suit la fin de l'histoire.
+  function endText(toIsMax, to) {
+    return toIsMax ? 'jusqu\'à ' + (state.deleted ? 'la suppression' : 'aujourd\'hui') : 'au ' + fmtDateTime(to);
+  }
+
   function nowIso() { return new Date().toISOString().replace(/\.\d+Z$/, 'Z'); }
 
   function isFull(fr) { return fr.from === fr.min && fr.to === fr.max; }
@@ -100,7 +109,7 @@
       zone.innerHTML = '<p class="detail">La frise s\'applique à une relation qui contient des chemins ou des sous-relations.</p>';
       return null;
     }
-    var fr = prev, max = nowIso();
+    var fr = prev, max = state.deleted ? beforeIso(state.deleted.timestamp) : nowIso();
     var wayRefs = {};
     rel.members.forEach(function (m) { if (m.type === 'way') wayRefs[m.ref] = true; });
     if (!fr) {
@@ -225,7 +234,7 @@
     html += '<div class="hors" style="left:0;width:' + left + '%"></div><div class="hors" style="left:' + right + '%;right:0"></div>';
     $('frise-fond').innerHTML = html;
     $('date-g').textContent = 'du ' + fmtDateTime(fr.from);
-    $('date-d').textContent = 'au ' + (fr.toIsMax ? 'aujourd\'hui' : fmtDateTime(fr.to));
+    $('date-d').textContent = endText(fr.toIsMax, fr.to);
     var vers = fr.hist.length === 1
       ? 'La relation elle-même n\'a qu\'une version (un seul trait) : ses modifications se trouvent surtout dans l\'historique de ses chemins.'
       : 'Traits : les ' + fr.hist.length + ' versions de la relation.';
@@ -421,7 +430,7 @@
     await showView({ snapshot: snap, results: results, tree: wtree });
     var r = results.filter(function (x) { return x.relationId === fr.relId; })[0];
     var shownCount = wtree.children.filter(function (c) { return c.kind !== 'gap' && c.kind !== 'order'; }).length;
-    $('resume').textContent = 'Période du ' + fmtDateTime(fr.from) + ' au ' + (fr.toIsMax ? 'aujourd\'hui' : fmtDateTime(fr.to)) + ' : '
+    $('resume').textContent = 'Période du ' + fmtDateTime(fr.from) + ' ' + endText(fr.toIsMax, fr.to) + ' : '
       + shownCount + ' élément(s) touché(s) affiché(s), ' + wtree.hiddenCount + ' masqué(s) (non modifiés dans la période'
       + (minor ? ' ou seulement ' + minor + ' modification(s) sans effet sur la continuité' : '') + '). '
       + relationChangeText(events, fr.relId)
@@ -450,7 +459,7 @@
     try { discussions = await F.fetchDiscussions(changesets); } catch (e) { discussions = {}; }
     if (state.frise !== fr) return;
     var atDate = !fr.toIsMax;
-    var html = '<p class="detail">Périodes de rupture, du ' + fmtDateTime(fr.from) + ' au ' + (atDate ? fmtDateTime(fr.to) : 'aujourd\'hui') + '.</p>';
+    var html = '<p class="detail">Périodes de rupture, du ' + fmtDateTime(fr.from) + ' ' + endText(!atDate, fr.to) + '.</p>';
     if (!spans.length) {
       html += '<p>Aucune période de rupture sur cette période dans l\'historique chargé.</p>';
     }

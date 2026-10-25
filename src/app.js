@@ -2,7 +2,7 @@
   'use strict';
 
   var F = window.Filum, U = window.FilumUI, $ = U.$, state = U.state, setStatus = U.setStatus, isHole = U.isHole, isWarning = U.isWarning;
-  var esc = F.esc, fmtDate = F.fmtDate, osmLink = F.osmLink, fmtKm = F.fmtKm, clip = F.clip;
+  var esc = F.esc, fmtDate = F.fmtDate, fmtDateTime = F.fmtDateTime, osmLink = F.osmLink, fmtKm = F.fmtKm, clip = F.clip;
 
   function parentsHtml(list) {
     return list.map(function (r) {
@@ -39,12 +39,36 @@
     }
   }
 
+  // La relation et son arbre. Une relation supprimée d'OpenStreetMap est lue dans sa dernière version avant la
+  // suppression (state.deleted garde qui l'a supprimée et quand) ; sans version visible, l'erreur reste.
+  async function loadSnapshot(id) {
+    state.deleted = null;
+    try { return await F.fetchTree(id); }
+    catch (e) {
+      if (!e.deletedRoot) throw e;
+      var d = await F.fetchDeletedRelation(id);
+      if (!d.last || !d.deletion) throw e;
+      state.deleted = { lastVersion: d.last.version, version: d.deletion.version, timestamp: d.deletion.timestamp, user: d.deletion.user, changeset: d.deletion.changeset };
+      var l = d.last;
+      return F.fetchTree(id, undefined, { type: 'relation', id: id, version: l.version, timestamp: l.timestamp, user: l.user, changeset: l.changeset, tags: l.tags || {}, members: l.members || [] });
+    }
+  }
+
+  function deletedBanner(id) {
+    var d = state.deleted;
+    if (!d) return '';
+    return '<p class="erreur">La relation ' + osmLink('relation', id) + ' a été supprimée d\'OpenStreetMap le ' + fmtDateTime(d.timestamp)
+      + (d.user ? ' par ' + F.userLink(d.user) : '') + (d.changeset ? ' (changeset ' + osmLink('changeset', d.changeset) + ')' : '') + '. '
+      + 'Vous voyez sa dernière version avant la suppression (v' + d.lastVersion + ') avec l\'état actuel de ses chemins ; '
+      + 'la frise permet de remonter dans son histoire jusqu\'à la suppression.</p>';
+  }
+
   async function run() {
     var input = F.parseRelationInput($('relation').value);
     if (input.error) { setStatus(input.error, true); return; }
     if (input.way) return runWay(input.way);
     var id = input.id;
-    $('parents').innerHTML = ''; $('trous').innerHTML = '';
+    $('parents').innerHTML = ''; $('trous').innerHTML = ''; $('supprimee').innerHTML = '';
     var prev = state.frise && state.frise.relId === id ? state.frise : null;
     if (prev && prev.loading) return;
     var token = ++state.friseToken;
@@ -54,7 +78,8 @@
     setStatus('Chargement de la relation ' + id + '...');
     try {
       state.nodes = {}; state.loaded = {}; state.selected = null; state.window = null;
-      state.snapshot = await F.fetchTree(id);
+      state.snapshot = await loadSnapshot(id);
+      $('supprimee').innerHTML = deletedBanner(id);
       try { state.snapshot.elements = state.snapshot.elements.concat(await F.fetchMemberNodes(state.snapshot)); }
       catch (e) { /* les nœuds membres sont facultatifs */ }
       state.results = F.analyzeTree(state.snapshot, id);

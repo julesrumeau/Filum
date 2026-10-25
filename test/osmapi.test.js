@@ -495,3 +495,33 @@ test('fetchNodePositions : au plus `cap` historiques de nœuds sont lus', async 
   assert.strictEqual(calls.filter(c => /history/.test(c)).length, 2);
   assert.strictEqual(r.unresolved, 2);
 });
+
+test('relation supprimée : l\'erreur porte la relation supprimée (deletedRoot) pour que la page propose la dernière version (ticket 18)', async () => {
+  const api = fakeApi({ relation100: { type: 'relation', id: 100, visible: false, version: 4 } });
+  await assert.rejects(fetchTree(100, api.getJson), (e) => e.deletedRoot && e.deletedRoot.version === 4);
+});
+
+test('fetchDeletedRelation : dernière version visible et version de suppression (ticket 18)', async () => {
+  const { fetchDeletedRelation } = require('../src/osmapi.js');
+  const get = async (path) => {
+    assert.strictEqual(path, 'relation/100/history.json');
+    return { elements: [
+      { id: 100, version: 1, timestamp: 'a', members: [{ type: 'way', ref: 1 }] },
+      { id: 100, version: 2, timestamp: 'b', members: [{ type: 'way', ref: 1 }, { type: 'way', ref: 2 }] },
+      { id: 100, version: 3, timestamp: 'c', visible: false, user: 'zed', changeset: 9 }] };
+  };
+  const d = await fetchDeletedRelation(100, get);
+  assert.strictEqual(d.last.version, 2);
+  assert.deepStrictEqual([d.deletion.version, d.deletion.user, d.deletion.changeset], [3, 'zed', 9]);
+  const none = await fetchDeletedRelation(100, async () => ({ elements: [{ id: 100, version: 1, visible: false }] }));
+  assert.strictEqual(none.last, null);
+});
+
+test('fetchTree avec une relation de départ imposée : elle remplace la lecture de la racine, ses chemins sont lus', async () => {
+  const db = { way10: W(10, [100, 101]) };
+  const api = fakeApi(db);
+  const root = R(100, [{ type: 'way', ref: 10, role: '' }, { type: 'way', ref: 11, role: '' }]);
+  const snap = await fetchTree(100, api.getJson, root);
+  assert.deepStrictEqual(snap.elements.map(e => e.type + e.id).sort(), ['relation100', 'way10']);
+  assert.ok(!api.calls.some(c => c.startsWith('relations.json')), 'la racine n\'est pas relue');
+});

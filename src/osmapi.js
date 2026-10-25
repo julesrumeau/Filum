@@ -70,23 +70,43 @@
     });
   }
 
+  // Historique d'une relation supprimée : sa dernière version visible (last, null s'il n'y en a jamais eu)
+  // et la version qui l'a supprimée (deletion).
+  async function fetchDeletedRelation(id, get) {
+    get = get || getJson;
+    var versions = (await get('relation/' + id + '/history.json')).elements.slice().sort(function (a, b) { return a.version - b.version; });
+    var last = null, deletion = null;
+    versions.forEach(function (v) {
+      if (v.visible === false) { if (last && !deletion) deletion = v; }
+      else { last = v; deletion = null; }
+    });
+    return { last: last, deletion: deletion };
+  }
+
   // La relation demandée doit exister et ne pas être supprimée ; sinon un message qui dit pourquoi.
   function checkRoot(rootId, rels) {
     var root = rels.filter(function (r) { return r.id === rootId; })[0];
     if (!root) throw new Error('La relation ' + rootId + ' n\'existe pas dans OpenStreetMap.');
-    if (root.visible === false) throw new Error('La relation ' + rootId + ' a été supprimée d\'OpenStreetMap (version ' + root.version + ').');
+    if (root.visible === false) {
+      var err = new Error('La relation ' + rootId + ' a été supprimée d\'OpenStreetMap (version ' + root.version + ').');
+      err.deletedRoot = root;
+      throw err;
+    }
   }
 
   // La relation, toutes ses sous-relations (niveau par niveau) et tous leurs chemins.
   // Pas de nœuds : la continuité n'a besoin que de la liste des nœuds de chaque chemin.
-  async function fetchTree(rootId, get) {
+  // rootOverride : la relation de départ déjà connue (par exemple la dernière version avant sa suppression),
+  // utilisée à la place de la lecture de la racine.
+  async function fetchTree(rootId, get, rootOverride) {
     get = get || getJson;
     var seen = {}, elements = [], level = [rootId];
     var wayIds = {};
     while (level.length) {
       level.forEach(function (id) { seen[id] = true; });
-      var rels = await fetchBulk('relation', level, get);
-      if (level[0] === rootId && level.length === 1) checkRoot(rootId, rels);
+      var first = level[0] === rootId && level.length === 1;
+      var rels = first && rootOverride ? [rootOverride] : await fetchBulk('relation', level, get);
+      if (first && !rootOverride) checkRoot(rootId, rels);
       var next = {};
       rels.forEach(function (r) {
         if (r.visible === false) return; // sous-relation supprimée depuis : ignorée
@@ -299,7 +319,7 @@
     }
   }
 
-  var api = { fetchMap: fetchMap, fetchNodeWays: fetchNodeWays, fetchMemberNodes: fetchMemberNodes, fetchWay: fetchWay, fetchParents: fetchParents, fetchWayHistories: fetchWayHistories, fetchRelationHistory: fetchRelationHistory, fetchDiscussions: fetchDiscussions, fetchTree: fetchTree, fetchNodes: fetchNodes, fetchNodePositions: fetchNodePositions, fetchHistoryContext: fetchHistoryContext,
+  var api = { fetchMap: fetchMap, fetchNodeWays: fetchNodeWays, fetchMemberNodes: fetchMemberNodes, fetchWay: fetchWay, fetchParents: fetchParents, fetchWayHistories: fetchWayHistories, fetchRelationHistory: fetchRelationHistory, fetchDiscussions: fetchDiscussions, fetchTree: fetchTree, fetchNodes: fetchNodes, fetchDeletedRelation: fetchDeletedRelation, fetchNodePositions: fetchNodePositions, fetchHistoryContext: fetchHistoryContext,
     fetchChangesets: fetchChangesets, MAX_IDS: MAX_IDS, MAX_URL_CHARS: MAX_URL_CHARS, API_BASE: BASE };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.Filum = Object.assign(root.Filum || {}, api);
