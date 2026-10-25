@@ -5,24 +5,39 @@
   // Le fond est une couleur (avec une forme facultative : white_circle), l'avant-plan une couleur et une forme (red_bar).
   var COLORS = { black: 1, blue: 1, brown: 1, gray: 1, grey: 1, green: 1, orange: 1, pink: 1, purple: 1, red: 1, white: 1, yellow: 1 };
 
-  function part(s) {
-    var m = /^([a-z]+)(?:_([a-z]+))?$/.exec(s || '');
-    return m && COLORS[m[1]] ? { color: m[1], shape: m[2] || null } : null;
+  // Formes de l'avant-plan que Filum dessine, et formes de fond dessinées. Les autres (Waymarked Trails en connaît une
+  // quarantaine) donnent un petit carré et un avertissement.
+  var DRAWN = { bar: 1, stripe: 1, dot: 1, circle: 1, cross: 1, x: 1, backslash: 1, slash: 1, triangle: 1, upper: 1, lower: 1, left: 1, right: 1, diamond: 1 };
+  var BG_DRAWN = { circle: 1, round: 1, frame: 1 };
+
+  function escText(s) {
+    return String(s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; });
   }
 
-  // null si la valeur n'a pas au moins deux champs, ou si une couleur n'est pas dans la liste connue.
-  // Un fond vide est permis (balisage blanc et rouge des GR). Après le premier avant-plan viennent éventuellement
-  // un second avant-plan (couleur_forme), puis le texte et sa couleur.
+  // couleur ou couleur_forme. Une couleur inconnue donne null et un avertissement ; une forme non dessinée un avertissement.
+  function part(s, drawn, warnings) {
+    if (!s) return null;
+    var m = /^([a-z]+)(?:_([A-Za-z_]+))?$/.exec(s);
+    if (!m || !COLORS[m[1]]) { warnings.push('couleur inconnue : ' + String(s).slice(0, 30)); return null; }
+    if (m[2] && !drawn[m[2]]) warnings.push('forme non dessinée : ' + m[2]);
+    return { color: m[1], shape: m[2] || null };
+  }
+
+  // null seulement si la valeur est vide. Tout champ est facultatif après la couleur de trait : une couleur ou une forme
+  // inconnue n'empêche pas le rendu du reste, elle ajoute un avertissement. Après le premier avant-plan viennent
+  // éventuellement un second avant-plan (couleur_forme), puis le texte (4 caractères au plus) et sa couleur.
   function parseOsmc(value) {
-    var p = String(value || '').split(':');
-    if (p.length < 2) return null;
-    var bg = p[1] ? part(p[1]) : null, fg = p[2] ? part(p[2]) : null;
-    if ((p[1] && !bg) || (p[2] && !fg)) return null;
+    var str = String(value || '').trim();
+    if (!str) return null;
+    var p = str.split(':'), warnings = [];
+    var waycolor = null;
+    if (p[0]) { if (COLORS[p[0]]) waycolor = p[0]; else warnings.push('couleur inconnue : ' + p[0].slice(0, 30)); }
+    var bg = part(p[1], BG_DRAWN, warnings), fg = part(p[2], DRAWN, warnings);
     var rest = p.slice(3), fg2 = null;
-    if (rest.length && part(rest[0])) fg2 = part(rest.shift());
-    var text = /^[A-Za-z0-9]{1,3}$/.test(rest[0] || '') ? rest[0] : null;
+    if (rest.length && rest[0].indexOf('_') > 0) fg2 = part(rest.shift(), DRAWN, warnings);
+    var text = /^[A-Za-z0-9]{1,4}$/.test(rest[0] || '') ? rest[0] : null;
     var tc = text && COLORS[rest[1]] ? rest[1] : null;
-    return { waycolor: p[0] && COLORS[p[0]] ? p[0] : null, background: bg, foreground: fg, foreground2: fg2, text: text, textcolor: tc };
+    return { waycolor: waycolor, background: bg, foreground: fg, foreground2: fg2, text: text, textcolor: tc, warnings: warnings };
   }
 
   // Forme de l'avant-plan, dessinée dans un carré de 20 sur 20. La couleur vient de la liste connue, jamais du tag brut.
@@ -46,7 +61,7 @@
     }
   }
 
-  // Petit SVG du symbole, ou une chaîne vide si la valeur n'est pas exploitable.
+  // Petit SVG du symbole, ou une chaîne vide si la valeur est vide. Les avertissements vont dans une infobulle (échappée).
   function osmcSvg(value) {
     var o = parseOsmc(value);
     if (!o) return '';
@@ -56,9 +71,16 @@
       : shape === 'frame'
         ? '<rect x="1" y="1" width="18" height="18" fill="none" stroke="' + bg.color + '" stroke-width="2"/>'
         : '<rect x="0.5" y="0.5" width="19" height="19" rx="2" fill="' + bg.color + '" stroke="#888" stroke-width="1"/>';
+    var inner = (o.foreground ? foreground(o.foreground) : '') + (o.foreground2 ? foreground(o.foreground2) : '');
+    if (!o.background && !inner) {
+      // Pas de symbole : la couleur de trait seule se dessine en barre, sinon un carré gris.
+      inner = o.waycolor ? '<rect x="1" y="8" width="18" height="4" fill="' + o.waycolor + '"/>' : '<text x="10" y="14" font-size="11" text-anchor="middle" fill="#888">?</text>';
+    }
     var text = o.text ? '<text x="10" y="14" font-size="9" font-weight="bold" text-anchor="middle" fill="' + (o.textcolor || 'black') + '">' + o.text + '</text>' : '';
-    return '<svg class="osmc" viewBox="0 0 20 20" width="20" height="20" role="img" aria-label="Balisage ' + (o.foreground ? o.foreground.color : bg.color) + '">'
-      + back + (o.foreground ? foreground(o.foreground) : '') + (o.foreground2 ? foreground(o.foreground2) : '') + text + '</svg>';
+    var label = o.foreground ? o.foreground.color : o.background ? bg.color : o.waycolor || 'inconnu';
+    var title = o.warnings.length ? '<title>' + escText(o.warnings.join(' ; ')) + '</title>' : '';
+    return '<svg class="osmc" viewBox="0 0 20 20" width="20" height="20" role="img" aria-label="Balisage ' + label + '">'
+      + title + back + inner + text + '</svg>';
   }
 
   var api = { parseOsmc: parseOsmc, osmcSvg: osmcSvg };
