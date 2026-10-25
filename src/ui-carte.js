@@ -123,7 +123,8 @@
       var p = ways[ref].nodes.map(function (n) { return nodes[n]; }).filter(function (n) { return n && typeof n.lat === 'number'; });
       if (p.length) { lines.push({ id: ref, pts: p, action: state.window ? state.window.ways[ref] : '' }); pts = pts.concat(p); }
     });
-    removedLines().forEach(function (l) { lines.push(l); pts = pts.concat(l.pts); });
+    // Dessinés en premier (dessous) et plus larges : un chemin remplacé par un autre au même endroit reste visible en bordure rouge.
+    removedLines().forEach(function (l) { lines.unshift(l); pts = pts.concat(l.pts); });
     // Une relation sans chemin (parcours de santé, arrêts seuls) se dessine avec ses nœuds membres.
     if (!pts.length && !state.window) pts = memberNodeRows(result.relationId).filter(function (n) { return typeof n.lat === 'number'; });
     if (!pts.length) {
