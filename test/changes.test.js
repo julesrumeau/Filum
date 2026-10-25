@@ -244,3 +244,20 @@ test('relationChangeSummary : versions, membres ajoutés et retirés, changement
   assert.deepStrictEqual(relationChangeSummary(ev, 100), { versions: 2, added: 2, removed: 2, tags: 2 });
   assert.deepStrictEqual(relationChangeSummary([], 100), { versions: 0, added: 0, removed: 0, tags: 0 });
 });
+
+test('contributorStats : un classement des auteurs de la période avec créations, modifications, suppressions et changesets (ticket 7)', () => {
+  const { contributorStats } = require('../src/changes.js');
+  const ev = [
+    { kind: 'way', id: 1, action: 'created', user: 'alice', changeset: 10 },
+    { kind: 'way', id: 2, action: 'modified', user: 'alice', changeset: 10 },
+    { kind: 'way', id: 3, action: 'modified', user: 'alice', changeset: 11 },
+    { kind: 'way', id: 4, action: 'deleted', user: 'bob', changeset: 12 },
+    { kind: 'way', id: 5, action: 'added-to-relation', user: 'bob', changeset: 12 },
+    { kind: 'relation', id: 100, action: 'modified', user: 'carol', changeset: 13 },
+  ];
+  const s = contributorStats(ev);
+  assert.deepStrictEqual(s.map(x => x.user), ['alice', 'bob', 'carol']);
+  assert.deepStrictEqual(s[0], { user: 'alice', created: 1, modified: 2, deleted: 0, members: 0, total: 3, changesets: 2 });
+  assert.deepStrictEqual(s[1], { user: 'bob', created: 0, modified: 0, deleted: 1, members: 1, total: 2, changesets: 1 });
+  assert.deepStrictEqual(contributorStats([]), []);
+});

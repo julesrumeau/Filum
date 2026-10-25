@@ -346,6 +346,22 @@
     }
   }
 
+  // Contributeurs de la période, repliés : qui a fait combien (tous les événements, mineurs compris).
+  function renderContributors(stats) {
+    var host = $('enquete-res') || $('enquete'), box = $('contributeurs');
+    if (!box) { box = document.createElement('div'); box.id = 'contributeurs'; host.insertBefore(box, host.firstChild); }
+    if (!stats.length) { box.innerHTML = ''; return; }
+    var rows = stats.slice(0, 15).map(function (s) {
+      return '<tr><td>' + F.userLink(s.user) + '</td><td>' + s.total + '</td><td>' + s.created + '</td><td>' + s.modified + '</td><td>'
+        + s.deleted + '</td><td>' + s.members + '</td><td>' + s.changesets + '</td></tr>';
+    }).join('');
+    box.innerHTML = '<details><summary>' + stats.length + ' contributeur(s) dans la période</summary>'
+      + '<table class="contrib"><thead><tr><th>Auteur</th><th>Total</th><th>Créés</th><th>Modifiés</th><th>Supprimés</th><th>Membres +/−</th>'
+      + '<th>Changesets</th></tr></thead><tbody>' + rows + '</tbody></table>'
+      + (stats.length > 15 ? '<p class="detail">et ' + (stats.length - 15) + ' autre(s) contributeur(s)</p>' : '')
+      + '<p class="detail">Éléments de la relation et de ses chemins directs, dans la période choisie.</p></details>';
+  }
+
   // Une phrase sur ce que la relation elle-même a changé (membres ajoutés ou retirés, tags), vide si rien.
   function relationChangeText(events, relId) {
     var s = F.relationChangeSummary(events, relId);
@@ -356,6 +372,7 @@
 
   async function showWindow(fr) {
     var events = F.windowChanges(fr.ctx, fr.relId, fr.from, fr.to), snap, results, tree, minor = 0;
+    renderContributors(F.contributorStats(events));
     if (state.hideMinor && fr.points) {
       var kept = F.filterMinor(events, F.impactDates(fr.points));
       minor = events.length - kept.length;

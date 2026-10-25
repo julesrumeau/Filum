@@ -51,6 +51,24 @@
     return out;
   }
 
+  // Classement des auteurs d'une liste d'événements : créations, modifications (rôles compris), suppressions, membres
+  // ajoutés ou retirés de la relation, nombre de changesets distincts. Le plus actif d'abord, puis par nom.
+  function contributorStats(events) {
+    var by = {};
+    events.forEach(function (e) {
+      var u = by[e.user] = by[e.user] || { user: e.user, created: 0, modified: 0, deleted: 0, members: 0, total: 0, changesets: 0, _cs: {} };
+      if (e.action === 'created') u.created++;
+      else if (e.action === 'deleted') u.deleted++;
+      else if (e.action === 'added-to-relation' || e.action === 'removed-from-relation') u.members++;
+      else u.modified++;
+      u.total++;
+      u._cs[e.changeset] = true;
+    });
+    return Object.keys(by).map(function (k) {
+      var u = by[k]; u.changesets = Object.keys(u._cs).length; delete u._cs; return u;
+    }).sort(function (a, b) { return b.total - a.total || (a.user < b.user ? -1 : 1); });
+  }
+
   // Nature d'un changement de tag ({ key, before, after }) : ajout, modif ou retrait.
   function tagChangeKind(t) {
     return t.before === undefined ? 'ajout' : t.after === undefined ? 'retrait' : 'modif';
@@ -155,7 +173,7 @@
     });
   }
 
-  var api = { impactDates: impactDates, filterMinor: filterMinor, windowChanges: windowChanges, diffNodes: diffNodes, diffTags: diffTags, diffMembers: diffMembers, memberChange: memberChange, tagChangeKind: tagChangeKind, relationChangeSummary: relationChangeSummary };
+  var api = { impactDates: impactDates, filterMinor: filterMinor, windowChanges: windowChanges, diffNodes: diffNodes, diffTags: diffTags, diffMembers: diffMembers, memberChange: memberChange, tagChangeKind: tagChangeKind, relationChangeSummary: relationChangeSummary, contributorStats: contributorStats };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.Filum = Object.assign(root.Filum || {}, api);
 })(typeof self !== 'undefined' ? self : this);
