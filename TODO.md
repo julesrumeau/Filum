@@ -25,7 +25,7 @@ Taille (estimation grossière) : S = moins d'une heure, M = quelques heures, L =
 ## Décisions prises
 
 1. **Géométrie** : on compare des identifiants de nœuds, pas des positions. Un nœud déplacé ne casse pas le parcours, et suivre la forme coûterait l'historique de chaque nœud
-2. **Définition du trou** : connexité physique = trou (rouge). Une rupture dans l'ordre de la liste sans trou physique est « ordre » (orange). Un raccord en T (le bout d'un chemin posé sur le milieu d'un autre) reste « ordre » avec un message dédié : continu pour un marcheur, mais la bonne pratique OSM est de couper le chemin. Cela explique l'écart avec Knooppuntnet sur 12432165 (deux trottoirs sans nœud commun, coupure pour eux, « ordre » pour Filum)
+2. **Définition du trou** : connexité physique = trou (rouge). Une rupture dans l'ordre de la liste sans trou physique est « ordre » (orange). Un raccord en T (le bout d'un chemin posé sur le milieu d'un autre) reste « ordre » avec un message dédié : continu pour un marcheur, mais la bonne pratique OSM est de couper le chemin. Écart avec Knooppuntnet sur 12432165 (mesuré le 25/10/2026) : l'itinéraire est un seul chemin physique, mais la liste est en deux moitiés dans le mauvais ordre (membres 32 et 33, seuls bouts libres de toute la relation) ; Filum dit « 1 morceau, 1 ordre », Knooppuntnet compte 2 segments (suites contiguës de la liste)
 3. **Chargement de l'historique** : automatique, avec estimation, progression et pause
 4. **Seuil des ruptures brèves** : 1 jour
 5. **Moniteur** : non, tant qu'aucun retour ne le demande
