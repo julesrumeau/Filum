@@ -84,8 +84,14 @@
     if (!id) return;
     var fr = state.frise, a = fr && fr.relId === id && fr.applied;
     var from = a && a.from !== fr.min ? a.from : null, to = a && a.to !== fr.max ? a.to : null;
-    try { history.replaceState(null, '', F.buildSearch(id, from, to)); } catch (e) { /* adresse non modifiable */ }
+    var geo = state.map && state.map.getGeo && state.map.getGeo();
+    var hash = F.buildHash({ zoom: geo && geo.zoom, lat: geo && geo.lat, lon: geo && geo.lon, sel: state.selected });
+    try { history.replaceState(null, '', F.buildSearch(id, from, to) + hash); } catch (e) { /* adresse non modifiable */ }
   }
+
+  // Met l'adresse à jour un instant après le dernier déplacement ou la dernière sélection (pas à chaque pixel).
+  var syncTimer = null;
+  function scheduleSync() { clearTimeout(syncTimer); syncTimer = setTimeout(syncUrl, 300); }
 
   // Période demandée par l'adresse (?du=&au=), appliquée une seule fois à la frise créée.
   function applyPendingPeriod(fr) {
@@ -522,6 +528,7 @@
   U.showView = showView;
   U.showWindow = showWindow;
   U.syncUrl = syncUrl;
+  U.scheduleSync = scheduleSync;
   U.useLive = useLive;
   U.windowState = windowState;
 })();

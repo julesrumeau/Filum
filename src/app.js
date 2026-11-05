@@ -101,6 +101,8 @@
       if (fr) { U.applyPendingPeriod(fr); await U.applyPeriod(); }
       else state.pendingPeriod = null;
       if (state.pendingSelect) { var sel = state.pendingSelect; state.pendingSelect = null; U.select(sel, { fromMap: true }); }
+      if (state.pendingGeo && state.map) state.map.setGeo(state.pendingGeo);
+      state.pendingGeo = null;
     } catch (e) {
       setStatus('Échec : ' + e.message, true);
     } finally {
@@ -139,6 +141,9 @@
     if (!q) return;
     $('relation').value = String(q.id);
     state.pendingPeriod = q.from || q.to ? { from: q.from, to: q.to } : null;
+    var h = F.readHash(location.hash);
+    if (h.sel) state.pendingSelect = h.sel;
+    state.pendingGeo = h.zoom === null ? null : h;
     run();
   })();
 

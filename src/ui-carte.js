@@ -289,6 +289,7 @@
         q.setAttribute('width', 2 * half); q.setAttribute('height', 2 * half);
       });
       if (state.fondOn) drawTiles(svg, view, box);
+      if (U.scheduleSync) U.scheduleSync();
     }
     function toDrawing(clientX, clientY) {
       var rc = svg.getBoundingClientRect();
@@ -355,20 +356,39 @@
       else zoom(b.dataset.z === 'in' ? 1.6 : 1 / 1.6);
     });
     apply();
+    return mapApi(box, full, { get: function () { return view; }, set: function (v) { view = v; }, apply: apply });
+  }
+
+  // Ce que la page peut demander à la carte : cadrer, centrer, lire ou fixer la position (ctl donne accès à la vue).
+  function mapApi(box, full, ctl) {
     return {
-      refresh: apply,
+      refresh: ctl.apply,
+      // Zoom, latitude et longitude du centre de la vue (comme OpenStreetMap), null tant que la carte est vue en entier.
+      getGeo: function () {
+        return ctl.get().w >= full.w * 0.999 ? null : F.viewToGeo(state.proj, ctl.get(), box.clientWidth);
+      },
+      // Montre la position demandée (zoom, lat, lon), dans les limites du zoom de la carte.
+      setGeo: function (g) {
+        var v = F.geoToView(state.proj, g, box.clientWidth, box.clientWidth * full.h / full.w);
+        if (v.w >= full.w) ctl.set(full);
+        else {
+          var w = Math.max(v.w, full.w / F.MAX_ZOOM), h = w * full.h / full.w;
+          ctl.set(F.panBy({ x: v.x + v.w / 2 - w / 2, y: v.y + v.h / 2 - h / 2, w: w, h: h }, full, 0, 0));
+        }
+        ctl.apply();
+      },
       // Centre la vue sur un point du dessin, avec un zoom suffisant pour le voir.
       // Cadre une boîte du dessin avec de la marge (un chemin minuscule reste visible, un grand tient en entier).
       fit: function (x0, y0, x1, y1) {
         var ratio = full.w / full.h, minW = full.w / 60;
         var w = Math.min(full.w, Math.max((x1 - x0) * 1.6, (y1 - y0) * 1.6 * ratio, minW)), h = w / ratio;
-        view = F.panBy({ x: (x0 + x1) / 2 - w / 2, y: (y0 + y1) / 2 - h / 2, w: w, h: h }, full, 0, 0);
-        apply();
+        ctl.set(F.panBy({ x: (x0 + x1) / 2 - w / 2, y: (y0 + y1) / 2 - h / 2, w: w, h: h }, full, 0, 0));
+        ctl.apply();
       },
       focus: function (cx, cy) {
         var w = full.w / 6, h = full.h / 6;
-        view = F.panBy({ x: cx - w / 2, y: cy - h / 2, w: w, h: h }, full, 0, 0);
-        apply();
+        ctl.set(F.panBy({ x: cx - w / 2, y: cy - h / 2, w: w, h: h }, full, 0, 0));
+        ctl.apply();
       },
     };
   }

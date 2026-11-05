@@ -36,7 +36,32 @@
     return list;
   }
 
-  var api = { mercV: mercV, chooseZoom: chooseZoom, tilesFor: tilesFor };
+  // Réciproque de mercV : latitude d'une ordonnée Web Mercator en « degrés ».
+  function invMercV(v) {
+    return (2 * Math.atan(Math.exp(v * Math.PI / 180)) - Math.PI / 2) * 180 / Math.PI;
+  }
+
+  // Vue du dessin (unités du dessin) vers { zoom, lat, lon } au sens d'OpenStreetMap, pour une carte de widthPx pixels
+  // de large. proj : { minU, maxV, scale, offX, offY } comme dans renderMap.
+  function viewToGeo(proj, view, widthPx) {
+    var cx = view.x + view.w / 2, cy = view.y + view.h / 2;
+    var pxPerDeg = widthPx / view.w * proj.scale;
+    return {
+      zoom: Math.log(pxPerDeg * 360 / 256) / Math.LN2,
+      lat: invMercV(proj.maxV - (cy - proj.offY) / proj.scale),
+      lon: proj.minU + (cx - proj.offX) / proj.scale,
+    };
+  }
+
+  // Réciproque : la vue du dessin qui montre { zoom, lat, lon } dans une carte de widthPx sur heightPx pixels.
+  function geoToView(proj, geo, widthPx, heightPx) {
+    var pxPerDeg = 256 * Math.pow(2, geo.zoom) / 360;
+    var w = widthPx * proj.scale / pxPerDeg, h = heightPx * proj.scale / pxPerDeg;
+    var cx = (geo.lon - proj.minU) * proj.scale + proj.offX, cy = (proj.maxV - mercV(geo.lat)) * proj.scale + proj.offY;
+    return { x: cx - w / 2, y: cy - h / 2, w: w, h: h };
+  }
+
+  var api = { viewToGeo: viewToGeo, geoToView: geoToView, mercV: mercV, chooseZoom: chooseZoom, tilesFor: tilesFor };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.Filum = Object.assign(root.Filum || {}, api);
 })(typeof self !== 'undefined' ? self : this);

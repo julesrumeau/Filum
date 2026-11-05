@@ -39,3 +39,22 @@ test('tilesFor : ignore ce qui sort du monde (longitude hors -180..180)', () => 
   const t = tilesFor(-200, -170, -10, 10, 3, 50);
   t.forEach(x => assert.ok(x.x >= 0 && x.x < 8));
 });
+
+const { viewToGeo, geoToView } = require('../src/tuiles.js');
+
+test('viewToGeo et geoToView : aller-retour entre la vue du dessin et zoom, latitude, longitude (ticket 27)', () => {
+  const proj = { minU: -1.52, maxV: mercV(48.91), scale: 8000, offX: 14, offY: 20 };
+  const view = { x: 300, y: 200, w: 120, h: 80 };
+  const g = viewToGeo(proj, view, 1000);
+  assert.ok(g.zoom > 10 && g.zoom < 25, 'zoom plausible : ' + g.zoom);
+  assert.ok(g.lat > 48.8 && g.lat < 48.95 && g.lon > -1.6 && g.lon < -1.4, 'position plausible');
+  const back = geoToView(proj, g, 1000, 1000 * view.h / view.w);
+  ['x', 'y', 'w', 'h'].forEach(k => assert.ok(Math.abs(back[k] - view[k]) < 1e-6, k + ' : ' + back[k] + ' vs ' + view[k]));
+});
+
+test('viewToGeo : à pleine largeur d\'écran de 256 pixels pour 360 degrés on est au zoom 0 (ticket 27)', () => {
+  const proj = { minU: -180, maxV: 180, scale: 1, offX: 0, offY: 0 };
+  const g = viewToGeo(proj, { x: 0, y: 0, w: 360, h: 360 }, 256);
+  assert.ok(Math.abs(g.zoom) < 1e-9);
+  assert.ok(Math.abs(g.lon) < 1e-9 && Math.abs(g.lat) < 1e-9);
+});

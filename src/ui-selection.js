@@ -97,7 +97,10 @@
   }
 
   function select(sel, opts) {
+    // Un objet absent de l'arbre (adresse partagée d'une autre version de la relation) n'est pas gardé comme sélection.
+    if (sel && /^(way|node|gap|order):/.test(sel) && !targetNode(sel)) sel = null;
     state.selected = sel;
+    if (U.scheduleSync) U.scheduleSync();
     highlightMap(sel);
     highlightEnquete(sel);
     if (opts && opts.fromMap) revealInTree(sel);

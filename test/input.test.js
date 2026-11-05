@@ -77,3 +77,24 @@ test('periodBound complète une date en début ou fin de journée, laisse une da
   assert.strictEqual(periodBound('2025-07-18', true), '2025-07-18T23:59:59Z');
   assert.strictEqual(periodBound('2025-07-18T20:33:22Z', true), '2025-07-18T20:33:22Z');
 });
+
+const { buildHash, readHash } = require('../src/input.js');
+
+test('buildHash : zoom, position et objet sélectionné, au format d\'OpenStreetMap (ticket 27)', () => {
+  assert.strictEqual(buildHash({ zoom: 19, lat: 48.898136, lon: -1.51117, sel: 'way:740533245' }), '#map=19/48.89814/-1.51117&id=way/740533245');
+  assert.strictEqual(buildHash({ zoom: 12.4, lat: 48.3655, lon: -4.4415 }), '#map=12.4/48.36550/-4.44150');
+  assert.strictEqual(buildHash({ sel: 'node:5' }), '#id=node/5');
+  assert.strictEqual(buildHash({ sel: 'gap:100:2' }), '#id=gap/100/2');
+  assert.strictEqual(buildHash({}), '');
+  assert.strictEqual(buildHash(null), '');
+});
+
+test('readHash : relit le zoom, la position et l\'objet, ignore ce qui est invalide (ticket 27)', () => {
+  assert.deepStrictEqual(readHash('#map=19/48.898136/-1.511170&id=way/740533245'), { zoom: 19, lat: 48.898136, lon: -1.51117, sel: 'way:740533245' });
+  assert.deepStrictEqual(readHash('#id=gap/100/2'), { zoom: null, lat: null, lon: null, sel: 'gap:100:2' });
+  assert.deepStrictEqual(readHash('#map=abc/1/2&id=way/x'), { zoom: null, lat: null, lon: null, sel: null });
+  assert.deepStrictEqual(readHash('#map=99/10/20'), { zoom: null, lat: null, lon: null, sel: null }, 'zoom hors de 0 à 22');
+  assert.deepStrictEqual(readHash('#map=10/95/20'), { zoom: null, lat: null, lon: null, sel: null }, 'latitude hors limites');
+  assert.deepStrictEqual(readHash('#id=<script>/1'), { zoom: null, lat: null, lon: null, sel: null });
+  assert.deepStrictEqual(readHash(''), { zoom: null, lat: null, lon: null, sel: null });
+});
