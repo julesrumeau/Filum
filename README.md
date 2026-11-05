@@ -10,7 +10,7 @@ Projet frère de [Scopus](https://github.com/julesrumeau/Scopus), même philosop
 
 Ouvrez `index.html` dans un navigateur (ou la version publiée), saisissez une relation et cliquez sur « Analyser ». Vous pouvez coller son adresse openstreetmap.org (par exemple `openstreetmap.org/relation/2952375`) ou écrire `2952375`, `relation 2952375`, `r2952375`. Un numéro ou une adresse de **chemin** (`way 123`) marche aussi : Filum cherche les relations qui le contiennent. Sous le résumé, « Fait partie de » liste les relations parentes de celle qui est affichée.
 
-L'adresse de la page Filum garde la relation et la période analysée (`?relation=2952375&du=2026-04-01`) : copiez-la pour partager une analyse. Elle garde aussi la position de la carte et l'objet sélectionné, sur le modèle d'OpenStreetMap (`#map=19/48.89814/-1.51117&id=way/740533245`) : en ouvrant le lien, la carte est cadrée au même endroit et l'objet est sélectionné. L'adresse se met à jour toute seule quand vous déplacez la carte ou cliquez sur un objet.
+L'adresse de la page Filum garde la relation et la période analysée (`?relation=2952375&du=2026-04-01`) : copiez-la pour partager une analyse. Elle garde aussi la position de la carte et l'objet sélectionné, sur le modèle d'OpenStreetMap (`#map=19/48.89814/-1.51117&id=way/740533245`) : en ouvrant le lien, la carte est cadrée au même endroit et l'objet est sélectionné. L'adresse se met à jour toute seule quand vous déplacez la carte ou cliquez sur un objet. Le bouton crayon de la carte propose d'ouvrir l'objet sélectionné (ou la relation) et la zone visible dans iD, ou dans JOSM ou Vespucci par leur télécommande (JOSM doit tourner avec la télécommande activée).
 
 Quelques relations pour essayer :
 

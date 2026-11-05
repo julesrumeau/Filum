@@ -61,7 +61,17 @@
     return { x: cx - w / 2, y: cy - h / 2, w: w, h: h };
   }
 
-  var api = { viewToGeo: viewToGeo, geoToView: geoToView, mercV: mercV, chooseZoom: chooseZoom, tilesFor: tilesFor };
+  // Bords de la vue du dessin en degrés : { left, right, top, bottom }.
+  function viewToBounds(proj, view) {
+    return {
+      left: proj.minU + (view.x - proj.offX) / proj.scale,
+      right: proj.minU + (view.x + view.w - proj.offX) / proj.scale,
+      top: invMercV(proj.maxV - (view.y - proj.offY) / proj.scale),
+      bottom: invMercV(proj.maxV - (view.y + view.h - proj.offY) / proj.scale),
+    };
+  }
+
+  var api = { viewToBounds: viewToBounds, viewToGeo: viewToGeo, geoToView: geoToView, mercV: mercV, chooseZoom: chooseZoom, tilesFor: tilesFor };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.Filum = Object.assign(root.Filum || {}, api);
 })(typeof self !== 'undefined' ? self : this);

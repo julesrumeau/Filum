@@ -58,3 +58,13 @@ test('viewToGeo : à pleine largeur d\'écran de 256 pixels pour 360 degrés on 
   assert.ok(Math.abs(g.zoom) < 1e-9);
   assert.ok(Math.abs(g.lon) < 1e-9 && Math.abs(g.lat) < 1e-9);
 });
+
+const { viewToBounds } = require('../src/tuiles.js');
+
+test('viewToBounds : les bords gauche, droit, haut et bas de la vue en degrés (ticket 28)', () => {
+  const proj = { minU: -180, maxV: 180, scale: 1, offX: 0, offY: 0 };
+  const b = viewToBounds(proj, { x: 90, y: 90, w: 180, h: 180 });
+  assert.ok(Math.abs(b.left + 90) < 1e-9 && Math.abs(b.right - 90) < 1e-9);
+  assert.ok(b.top > 0 && b.bottom < 0 && Math.abs(b.top + b.bottom) < 1e-9, 'haut et bas symétriques autour de l\'équateur');
+  assert.ok(b.top > 60 && b.top < 85.06, 'latitude Mercator plausible : ' + b.top);
+});

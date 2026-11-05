@@ -199,7 +199,8 @@
       + '<button data-z="out" aria-label="Zoom arrière">&minus;</button>'
       + '<button data-z="reset" aria-label="Vue complète">&#8962;</button>'
       + (nodeRows.length ? '<button data-z="noeuds" aria-label="Nœuds membres" title="Nœuds membres (arrêts, bornes...)" class="noeuds' + (state.nodesOff ? '' : ' actif') + '">&#9670;</button>' : '')
-      + '<button data-z="fond" aria-label="Fond de carte OpenStreetMap" title="Fond de carte OpenStreetMap" class="fond' + (state.fondOn ? ' actif' : '') + '">&#9638;</button></div>'
+      + '<button data-z="fond" aria-label="Fond de carte OpenStreetMap" title="Fond de carte OpenStreetMap" class="fond' + (state.fondOn ? ' actif' : '') + '">&#9638;</button>'
+      + '<button data-z="editer" aria-label="Modifier avec un éditeur" title="Modifier avec un éditeur (iD, JOSM, Vespucci)">&#9998;</button></div>'
       + '<div class="attrib" ' + (state.fondOn ? '' : 'hidden') + '>&copy; contributeurs <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a></div>';
     if (nodeRows.length && state.nodesOff) box.querySelector('svg').classList.add('cache-noeuds');
     state.map = setupZoom(box, { x: 0, y: 0, w: W, h: H });
@@ -352,6 +353,7 @@
         box.querySelector('.attrib').hidden = !state.fondOn;
         if (state.fondOn) drawTiles(svg, view, box); else $('tuiles').innerHTML = '';
       }
+      else if (b.dataset.z === 'editer') U.openEditMenu(box);
       else if (b.dataset.z === 'reset') { view = full; apply(); }
       else zoom(b.dataset.z === 'in' ? 1.6 : 1 / 1.6);
     });
@@ -363,6 +365,9 @@
   function mapApi(box, full, ctl) {
     return {
       refresh: ctl.apply,
+      // Position et bords de la vue actuelle (même en vue complète), pour ouvrir un éditeur sur la zone visible.
+      geoNow: function () { return F.viewToGeo(state.proj, ctl.get(), box.clientWidth); },
+      getBounds: function () { return F.viewToBounds(state.proj, ctl.get()); },
       // Zoom, latitude et longitude du centre de la vue (comme OpenStreetMap), null tant que la carte est vue en entier.
       getGeo: function () {
         return ctl.get().w >= full.w * 0.999 ? null : F.viewToGeo(state.proj, ctl.get(), box.clientWidth);
