@@ -406,3 +406,31 @@ test('trois morceaux visités dans l\'ordre A, B, C : deux trous, comme avant', 
   assert.strictEqual(r.gaps.length, 2);
   assert.strictEqual(r.orderIssues.length, 0);
 });
+
+// Tronçon de rond-point découpé : junction=roundabout mais chemin ouvert (premier nœud différent du dernier).
+function roundaboutSection(id, nodes) { return { type: 'way', id, nodes, tags: { junction: 'roundabout' } }; }
+
+test('tronçon de rond-point ouvert : un raccord en T au milieu du tronçon est un problème d\'ordre (ticket 31)', () => {
+  const t = analyzeTree({ elements: [
+    way(1, [10, 11, 52]), roundaboutSection(2, [50, 51, 52, 53]), way(3, [53, 60]), rel(100, [1, 2, 3]),
+  ] }, 100)[0];
+  assert.strictEqual(t.gaps.length, 0, 'pas un trou : tout est relié');
+  assert.strictEqual(t.orderIssues.length, 1);
+  assert.strictEqual(t.orderIssues[0].touching, true, 'le chemin touche le tronçon ailleurs qu\'à un bout');
+});
+
+test('tronçons de rond-point reliés par leurs bouts : aucun problème (ticket 31)', () => {
+  const t = analyzeTree({ elements: [
+    way(1, [10, 50]), roundaboutSection(2, [50, 51, 52]), roundaboutSection(3, [52, 53, 54]), way(4, [54, 60]), rel(100, [1, 2, 3, 4]),
+  ] }, 100)[0];
+  assert.strictEqual(t.gaps.length, 0);
+  assert.strictEqual(t.orderIssues.length, 0);
+});
+
+test('rond-point fermé : un raccord en T reste valide (ticket 31)', () => {
+  const t = analyzeTree({ elements: [
+    way(1, [10, 11, 52]), roundabout(2, [50, 51, 52, 53]), way(3, [53, 60]), rel(100, [1, 2, 3]),
+  ] }, 100)[0];
+  assert.strictEqual(t.gaps.length, 0);
+  assert.strictEqual(t.orderIssues.length, 0);
+});

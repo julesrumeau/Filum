@@ -20,9 +20,11 @@
     return b.nodes.some(function (n) { return set.has(n); });
   }
 
-  // Rond-point : chemin fermé où l'on entre et sort par n'importe lequel de ses nœuds.
+  // Rond-point : chemin FERMÉ (premier nœud = dernier) où l'on entre et sort par n'importe lequel de ses nœuds.
+  // Un tronçon de rond-point découpé (junction=roundabout mais ouvert) se comporte comme un chemin ordinaire : on y
+  // entre et sort par ses bouts, un raccord au milieu est un raccord en T (ticket 31).
   function isRoundabout(w) {
-    return !!(w.tags && w.tags.junction === 'roundabout' && w.nodes.length > 1);
+    return !!(w.tags && w.tags.junction === 'roundabout' && w.nodes.length > 1 && w.nodes[0] === w.nodes[w.nodes.length - 1]);
   }
 
   function uniqueNodes(w) {
