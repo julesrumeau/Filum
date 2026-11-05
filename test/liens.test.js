@@ -36,3 +36,18 @@ test('userLink : lien vers How did you contribute, nom encodé dans l\'adresse e
   assert.match(h, /href="https:\/\/hdyc\.neis-one\.org\/\?a%20b%22%3Cx%3E"/);
   assert.doesNotMatch(h, /<x>/);
 });
+
+test('toolLinks : un réseau de carrefours (type=network) va vers la page réseau de Knooppuntnet, pas la page itinéraire (ticket 29)', () => {
+  const l = toolLinks({ type: 'network', 'network:type': 'node_network' }, 8462816);
+  assert.deepStrictEqual(l.map(x => x.name), ['Knooppuntnet']);
+  assert.strictEqual(l[0].url, 'https://knooppuntnet.nl/fr/analysis/network/8462816');
+  assert.strictEqual(toolLinks({ type: 'route', route: 'bicycle', 'network:type': 'node_network' }, 5)[1].url, 'https://knooppuntnet.nl/fr/analysis/route/5');
+});
+
+test('toolLinks : les pistes (route=piste) vont vers le sous-site slopes de Waymarked Trails (ticket 30)', () => {
+  ['downhill', 'nordic', 'sled', 'hike', 'sleigh', 'snowmobile'].forEach(t => {
+    const l = toolLinks({ type: 'route', route: 'piste', 'piste:type': t }, 18017065);
+    assert.deepStrictEqual(l.map(x => x.name), ['Waymarked Trails'], t);
+    assert.strictEqual(l[0].url, 'https://slopes.waymarkedtrails.org/#route?id=18017065&type=relation', t);
+  });
+});

@@ -2,7 +2,7 @@
   'use strict';
 
   // Sous-site de Waymarked Trails selon route=*.
-  var WMT = { hiking: 'hiking', foot: 'hiking', bicycle: 'cycling', mtb: 'mtb', horse: 'riding', inline_skates: 'skating' };
+  var WMT = { hiking: 'hiking', foot: 'hiking', bicycle: 'cycling', mtb: 'mtb', horse: 'riding', inline_skates: 'skating', piste: 'slopes' };
   var TRANSPORT = { bus: 1, tram: 1, trolleybus: 1, train: 1, subway: 1, light_rail: 1, ferry: 1, share_taxi: 1, monorail: 1 };
 
   // Outils plus spécialisés pour une relation, selon ses tags : [{ name, url }]. Aucun lien si le type n'est pas reconnu
@@ -14,7 +14,10 @@
     if (TRANSPORT[t.route] || (t.type === 'route_master' && TRANSPORT[t.route_master])) {
       out.push({ name: 'PTNA', url: 'https://ptna.openstreetmap.de/relation.php?id=' + id + '&lang=fr' });
     }
-    if (t['network:type'] === 'node_network') out.push({ name: 'Knooppuntnet', url: 'https://knooppuntnet.nl/fr/analysis/route/' + id });
+    if (t['network:type'] === 'node_network') {
+      // Un réseau de carrefours (type=network) a sa propre page ; un itinéraire du réseau (type=route) a la sienne.
+      out.push({ name: 'Knooppuntnet', url: 'https://knooppuntnet.nl/fr/analysis/' + (t.type === 'network' ? 'network' : 'route') + '/' + id });
+    }
     return out;
   }
 
