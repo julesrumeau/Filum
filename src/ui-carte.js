@@ -100,11 +100,14 @@
   // Nœuds membres chargés de la relation affichée et de ses sous-relations.
   function memberNodeRows(relId) {
     var inside = subtreeIds(relId), seen = {}, out = [];
+    state.nodeTints = {};
     state.snapshot.elements.forEach(function (e) {
       if (e.type !== 'relation' || !inside[e.id]) return;
       e.members.forEach(function (mb) {
         if (mb.type !== 'node' || seen[mb.ref]) return;
         seen[mb.ref] = true;
+        var tint = F.roleTint(mb.role);
+        if (tint) state.nodeTints[mb.ref] = tint;
         var n = state.snapshot.elements.filter(function (x) { return x.type === 'node' && x.id === mb.ref; })[0];
         if (n) out.push(n);
       });
@@ -281,7 +284,7 @@
     }
     var nodeRows = state.window ? [] : memberNodeRows(result.relationId);
     nodeRows.forEach(function (n) {
-      svg += '<rect class="noeud-membre" data-sel="node:' + n.id + '" data-cx="' + X(n) + '" data-cy="' + Y(n) + '"/>';
+      svg += '<rect class="noeud-membre' + (state.nodeTints[n.id] ? ' n-' + state.nodeTints[n.id] : '') + '" data-sel="node:' + n.id + '" data-cx="' + X(n) + '" data-cy="' + Y(n) + '"/>';
     });
     var inside = subtreeIds(result.relationId);
     state.results.filter(function (r) { return inside[r.relationId]; }).forEach(function (r) {

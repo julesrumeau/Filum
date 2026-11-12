@@ -5,7 +5,7 @@
   var esc = F.esc, fmtDate = F.fmtDate, osmLink = F.osmLink, fmtKm = F.fmtKm, clip = F.clip;
 
   // Classe de couleur de l'étiquette d'un rôle d'itinéraire à sens (forward, backward), aucune pour les autres.
-  function roleClass(role) { return role === 'forward' || role === 'backward' ? ' role-' + role : ''; }
+  function roleClass(role) { var t = F.roleTint(role); return t ? ' role-' + t : ''; }
 
   function metaText(n) {
     if (!n.version) return '';

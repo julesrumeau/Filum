@@ -32,6 +32,9 @@
   .pt { display:inline-block; width:10px; height:10px; border-radius:50%; vertical-align:middle; } .pt.rouge { background:var(--alerte); } .pt.orange { background:var(--avert); } .pt.ocre { background:#b7791f; border-radius:2px; } .pt.vert { background:#2e9e44; } .pt.noir { background:#1a1a1a; }
   .frise-bulle .melange { color:var(--avert); font-weight:bold; }
   .legende { font-weight:bold; } .legende.r-forward { color:#e4572e; } .legende.r-backward { color:#1f5fbf; } .legende.r-both { color:#00a5b8; }
+  svg .noeud-membre.n-stop { fill:#7b3fa0; } svg .noeud-membre.n-platform { fill:#1f9ad6; } svg .noeud-membre.sel { fill:var(--selection); }
+  .role.role-stop { background:#e3d2f0; } .role.role-platform { background:#cfe9f8; }
+  .pt.stop { background:#7b3fa0; border-radius:2px; } .pt.platform { background:#1f9ad6; border-radius:2px; }
   .role.role-forward { background:#fbd5cc; } .role.role-backward { background:#cfe0f7; }
   svg .fleche { fill:#1a1a1a; stroke:#fff; stroke-width:1.5; stroke-linejoin:round; vector-effect:non-scaling-stroke; pointer-events:none; }
   svg .depart { fill:#2e9e44; stroke:#fff; stroke-width:2; vector-effect:non-scaling-stroke; pointer-events:none; } svg .arrivee { fill:#1a1a1a; stroke:#fff; stroke-width:2; vector-effect:non-scaling-stroke; pointer-events:none; }
@@ -136,7 +139,7 @@
         <ul>
           <li><span class="pt rouge"></span> Point rouge : un <strong>trou</strong>, deux morceaux de la relation sans aucun point commun ; le trait pointillé rouge relie les deux bouts les plus proches.</li>
           <li><span class="pt orange"></span> Point orange : un <strong>problème d'ordre</strong>. La liste saute d'un chemin à un autre (« membres mélangés »), ou un chemin se pose au milieu d'un autre (« raccord en T », à couper à cet endroit).</li>
-          <li><span class="pt ocre"></span> Carré ocre : un nœud membre de la relation (arrêt, borne, point de passage).</li>
+          <li><span class="pt ocre"></span> Carré ocre : un nœud membre de la relation (borne, point de passage). Pour les lignes de transport : <span class="pt stop"></span> violet = arrêt (<code>stop</code>), <span class="pt platform"></span> bleu clair = quai (<code>platform</code>).</li>
           <li><strong>Couleur d'un trait</strong> : chaque morceau (suite de chemins reliés entre eux) a la sienne. Pour un itinéraire à sens : <span class="legende r-forward">rouge</span> aller (forward), <span class="legende r-backward">bleu</span> retour (backward), <span class="legende r-both">cyan</span> dans les deux sens.</li>
           <li><strong>Triangles noirs</strong> : le sens du parcours ; <span class="pt vert"></span> point vert au départ, <span class="pt noir"></span> point noir à l'arrivée (seulement pour un itinéraire simple, déduit de l'ordre de la liste).</li>
           <li><strong>Dans une période</strong> : trait vert = chemin créé, orange = modifié, bleu = ajouté à la relation, rouge épais pointillé = retiré ou supprimé.</li>

@@ -37,3 +37,13 @@ test('fmtDate garde le jour, clip coupe au-delà de 300 caractères', () => {
 test('fmtDateTime : jour et heure UTC à la seconde (ruptures brèves)', () => {
   assert.strictEqual(fmtDateTime('2025-07-18T20:33:22Z'), '2025-07-18 20:33:22 UTC');
 });
+
+const { roleTint } = require('../src/html.js');
+
+test('roleTint : la famille d\'un rôle pour la couleur (arrêt, quai, aller, retour), rien pour les autres (message 20)', () => {
+  ['stop', 'stop_entry_only', 'stop_exit_only'].forEach(r => assert.strictEqual(roleTint(r), 'stop', r));
+  ['platform', 'platform_entry_only', 'platform_exit_only'].forEach(r => assert.strictEqual(roleTint(r), 'platform', r));
+  assert.strictEqual(roleTint('forward'), 'forward');
+  assert.strictEqual(roleTint('backward'), 'backward');
+  ['', undefined, null, 'outer', 'guidepost', 'stopper', 'platformx'].forEach(r => assert.strictEqual(roleTint(r), null, String(r)));
+});

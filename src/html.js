@@ -29,7 +29,16 @@
     return '<a href="https://hdyc.neis-one.org/?' + encodeURIComponent(String(name)) + '" target="_blank" rel="noopener">' + esc(name) + '</a>';
   }
 
-  var api = { userLink: userLink, esc: esc, osmLink: osmLink, fmtKm: fmtKm, fmtDate: fmtDate, fmtDateTime: fmtDateTime, clip: clip };
+  // Famille d'un rôle de membre, pour la couleur : arrêt (stop, stop_entry_only, stop_exit_only), quai (platform...),
+  // aller (forward), retour (backward). null pour tout autre rôle.
+  function roleTint(role) {
+    var r = String(role || '');
+    if (/^stop(_entry_only|_exit_only)?$/.test(r)) return 'stop';
+    if (/^platform(_entry_only|_exit_only)?$/.test(r)) return 'platform';
+    return r === 'forward' || r === 'backward' ? r : null;
+  }
+
+  var api = { roleTint: roleTint, userLink: userLink, esc: esc, osmLink: osmLink, fmtKm: fmtKm, fmtDate: fmtDate, fmtDateTime: fmtDateTime, clip: clip };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.Filum = Object.assign(root.Filum || {}, api);
 })(typeof self !== 'undefined' ? self : this);
