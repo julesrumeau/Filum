@@ -1,8 +1,8 @@
 (function (root) {
   'use strict';
 
-  // Sens de parcours d'un itinéraire SIMPLE : une seule suite de chemins, deux bouts libres, sans branche, sans boucle,
-  // sans rond-point ni raccord en T, sans rôle autre que vide ou main. Dans tous les autres cas, null : mieux vaut
+  // Sens de parcours d'un itinéraire SIMPLE : une seule suite de chemins, deux bouts libres (ou une boucle fermée sur
+  // elle-même), sans branche, sans rond-point ni raccord en T, sans rôle autre que vide ou main. Dans tous les autres cas, null : mieux vaut
   // ne rien montrer qu'un sens faux (message 31 de pyrog).
   var MIN_AGREEMENT = 0.6;
 
@@ -28,16 +28,34 @@
       if (interior[node] || ends[node].length > 2) return null; // raccord en T ou branche
       if (ends[node].length === 1) free.push(Number(node));
     }
+    if (free.length === 0) return loopDirection(members, ends);
     if (free.length !== 2) return null;
-    var path = orderPath(members, ends, free[0]);
+    var path = orderPath(members, ends, free[0], null);
     return path && direct(path);
   }
 
+  // Boucle (aucun bout libre) : on part du premier membre de la liste, dans un sens ou dans l'autre, et on garde le
+  // sens où la liste monte le plus souvent. Le départ et l'arrivée sont le même nœud.
+  function loopDirection(members, ends) {
+    var best = null;
+    [0, 1].forEach(function (side) {
+      var m = members[0], first = { k: 0, side: side }, node = side === 0 ? m.nodes[0] : m.nodes[m.nodes.length - 1];
+      var path = orderPath(members, ends, node, first);
+      if (!path || path[path.length - 1].to !== node) return;
+      var r = fit(path);
+      if (!best || r > best.r) best = { path: path, r: r };
+    });
+    if (!best || best.r < MIN_AGREEMENT) return null;
+    var res = result(best.path);
+    res.loop = true;
+    return res;
+  }
+
   // Parcourt la chaîne depuis un bout libre ; null si elle n'atteint pas tous les chemins (plusieurs morceaux).
-  function orderPath(members, ends, startNode) {
+  function orderPath(members, ends, startNode, firstItem) {
     var cur = startNode, used = {}, path = [];
     for (;;) {
-      var item = ends[cur].filter(function (e) { return !used[e.k]; })[0];
+      var item = firstItem && !path.length ? firstItem : (ends[cur] || []).filter(function (e) { return !used[e.k]; })[0];
       if (!item) break;
       used[item.k] = true;
       var m = members[item.k], forward = item.side === 0, next = forward ? m.nodes[m.nodes.length - 1] : m.nodes[0];
@@ -48,15 +66,23 @@
   }
 
   // Choisit le bout de départ : celui d'où la liste est le plus souvent croissante. Sans ordre net, null.
+  // Part des paires de chemins consécutifs du parcours qui se suivent aussi dans la LISTE (rang suivant). 1 pour une
+  // liste parfaitement ordonnée, (N-2)/(N-1) pour une liste tournée en deux moitiés, près de 0 pour une liste mélangée.
+  function fit(path) {
+    var next = 0;
+    for (var i = 1; i < path.length; i++) if (path[i].index === path[i - 1].index + 1) next++;
+    return next / (path.length - 1);
+  }
+
+  function reverse(path) {
+    return path.slice().reverse().map(function (p) { return { index: p.index, ref: p.ref, forward: !p.forward, from: p.to, to: p.from }; });
+  }
+
+  // Choisit le bout de départ : celui d'où la liste se suit le mieux. Sans ordre net, null.
   function direct(path) {
-    var up = 0;
-    for (var i = 1; i < path.length; i++) if (path[i].index > path[i - 1].index) up++;
-    var ratio = up / (path.length - 1);
-    if (ratio >= MIN_AGREEMENT) return result(path);
-    if (ratio <= 1 - MIN_AGREEMENT) {
-      return result(path.slice().reverse().map(function (p) { return { index: p.index, ref: p.ref, forward: !p.forward, from: p.to, to: p.from }; }));
-    }
-    return null;
+    var back = reverse(path), a = fit(path), b = fit(back);
+    if (Math.max(a, b) < MIN_AGREEMENT) return null;
+    return result(a >= b ? path : back);
   }
 
   function result(path) { return { path: path, start: path[0].from, end: path[path.length - 1].to }; }

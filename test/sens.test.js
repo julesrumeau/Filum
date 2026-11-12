@@ -33,7 +33,6 @@ test('routeDirection : une liste en deux moitiés bien ordonnées mais tournées
 });
 
 test('routeDirection : null pour une boucle, une branche, un raccord en T, un rond-point, un doublon ou un trou', () => {
-  assert.strictEqual(routeDirection([m(1, [10, 11, 12]), m(2, [12, 13, 10])]), null, 'boucle');
   assert.strictEqual(routeDirection([m(1, [10, 11, 12]), m(2, [12, 13]), m(3, [12, 14])]), null, 'branche');
   assert.strictEqual(routeDirection([m(1, [10, 11, 12]), m(2, [11, 20])]), null, 'raccord en T');
   assert.strictEqual(routeDirection([m(1, [10, 11, 12]), m(2, [12, 13, 14, 12])]), null, 'chemin fermé');
@@ -54,4 +53,31 @@ test('routeDirection : une liste qui saute d\'un bout à l\'autre sans ordre net
   // tracé 10 -> 15 en 5 chemins ; liste mélangée 1, 3, 5, 2, 4 : environ la moitié des paires monte
   const ways = [m(1, [10, 11]), m(2, [11, 12]), m(3, [12, 13]), m(4, [13, 14]), m(5, [14, 15])];
   assert.strictEqual(routeDirection([ways[0], ways[2], ways[4], ways[1], ways[3]]), null);
+});
+
+test('routeDirection : une boucle (itinéraire fermé de plusieurs chemins) part du début de la liste et revient au même point (message 31)', () => {
+  const d = routeDirection([m(1, [10, 11, 12]), m(2, [12, 13, 14]), m(3, [14, 15, 10])]);
+  assert.strictEqual(d.loop, true);
+  assert.deepStrictEqual(d.path.map(p => [p.ref, p.forward]), [[1, true], [2, true], [3, true]]);
+  assert.strictEqual(d.start, 10);
+  assert.strictEqual(d.end, 10);
+});
+
+test('routeDirection : une boucle dont un chemin est dessiné à l\'envers garde le sens de la liste', () => {
+  const d = routeDirection([m(1, [10, 11, 12]), m(2, [14, 13, 12]), m(3, [14, 15, 10])]);
+  assert.deepStrictEqual(d.path.map(p => [p.ref, p.forward]), [[1, true], [2, false], [3, true]]);
+});
+
+test('routeDirection : une boucle dont la liste est à l\'envers du premier chemin est parcourue dans le sens de la liste', () => {
+  // le premier membre (1) est écrit de 12 vers 10 : on le parcourt de 12 vers 10 puis on enchaîne dans l'ordre de la liste
+  const d = routeDirection([m(1, [12, 11, 10]), m(3, [10, 15, 14]), m(2, [14, 13, 12])]);
+  assert.strictEqual(d.loop, true);
+  assert.deepStrictEqual(d.path.map(p => p.ref), [1, 3, 2]);
+  assert.strictEqual(d.start, d.end);
+});
+
+test('routeDirection : une boucle avec une branche ou une liste mélangée n\'a pas de sens (message 31)', () => {
+  assert.strictEqual(routeDirection([m(1, [10, 11, 12]), m(2, [12, 13, 10]), m(3, [12, 20])]), null, 'branche');
+  const ways = [m(1, [10, 11]), m(2, [11, 12]), m(3, [12, 13]), m(4, [13, 14]), m(5, [14, 10])];
+  assert.strictEqual(routeDirection([ways[0], ways[2], ways[4], ways[1], ways[3]]), null, 'liste mélangée');
 });

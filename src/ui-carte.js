@@ -72,8 +72,10 @@
     });
     var dir = state.direction;
     box.innerHTML = (tools.length ? '<p class="detail">Voir aussi, un outil plus spécialisé : ' + tools.join(' · ') + '</p>' : '')
-      + (dir ? '<p class="detail">Sens du parcours, déduit de l\'ordre de la liste : du nœud ' + osmLink('node', dir.start) + ' (point vert) au nœud '
-        + osmLink('node', dir.end) + ' (point noir). Affiché seulement pour un itinéraire simple, sans branche ni boucle.</p>' : '')
+      + (dir ? '<p class="detail">Sens du parcours, déduit de l\'ordre de la liste : ' + (dir.loop
+        ? 'boucle, départ et arrivée au nœud ' + osmLink('node', dir.start) + ' (point vert)'
+        : 'du nœud ' + osmLink('node', dir.start) + ' (point vert) au nœud ' + osmLink('node', dir.end) + ' (point noir)')
+        + '. Affiché seulement pour un itinéraire simple, sans branche, rond-point ni raccord en T.</p>' : '')
       + '<details><summary>Statistiques de la relation</summary><div class="stats">' + rows.join('<br>') + '</div></details>';
     var res = state.results.filter(function (r) { return r.relationId === relId; })[0];
     if (res && res.isPolygon) {
@@ -150,7 +152,8 @@
         if (!last || last[0] !== q[0] || last[1] !== q[1]) state.directionPts.push(q);
       });
     });
-    [[dir.start, 'depart', 'Départ'], [dir.end, 'arrivee', 'Arrivée']].forEach(function (e) {
+    // Une boucle revient à son point de départ : un seul repère.
+    (dir.loop ? [[dir.start, 'depart', 'Départ et arrivée (boucle)']] : [[dir.start, 'depart', 'Départ'], [dir.end, 'arrivee', 'Arrivée']]).forEach(function (e) {
       var n = state.nodes[e[0]];
       if (n && typeof n.lat === 'number') out += '<circle class="' + e[1] + '" cx="' + X(n) + '" cy="' + Y(n) + '"><title>' + e[2] + ' (sens déduit de l\'ordre de la liste)</title></circle>';
     });
