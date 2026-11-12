@@ -57,7 +57,7 @@
         var relevant = byDate[date].some(function (c) { return c.type === 'relation' || members[c.id]; });
         if (!relevant && points.length) {
           var prev = points[points.length - 1];
-          points.push({ date: date, causes: byDate[date], broken: prev.broken, mixed: prev.mixed, pieces: prev.pieces, gaps: prev.gaps });
+          points.push({ date: date, causes: byDate[date], broken: prev.broken, mixed: prev.mixed, tee: prev.tee, pieces: prev.pieces, gaps: prev.gaps });
           continue;
         }
         var r = C.analyzeContinuity(snap, relationId);
@@ -65,7 +65,10 @@
           date: date,
           causes: byDate[date],
           broken: r.gaps.length > 0 || r.openEnds.length > 0,
-          mixed: r.orderIssues.length > 0, // membres mélangés : liste mal ordonnée, même sans trou
+          // Membres mélangés : la liste saute d'un chemin à un autre sans nœud commun. Raccord en T : un chemin se pose au
+          // milieu d'un autre (un rond-point ou une voie non coupée à l'intersection). Deux défauts distincts, tous deux sans trou.
+          mixed: r.orderIssues.some(function (o) { return !o.touching; }),
+          tee: r.orderIssues.some(function (o) { return o.touching; }),
           pieces: r.pieces.length,
           gaps: r.gaps.length,
         });
@@ -95,7 +98,7 @@
 
   // Périodes pendant lesquelles la relation est cassée : début (date et versions responsables)
   // et fin (réparation) ou null si c'est toujours cassé.
-  // `field` choisit ce qu'on suit : 'broken' (trous, par défaut) ou 'mixed' (membres mélangés).
+  // `field` choisit ce qu'on suit : 'broken' (trous, par défaut), 'mixed' (membres mélangés) ou 'tee' (raccords en T).
   function spansOf(points, field) {
     field = field || 'broken';
     var spans = [], open = null;

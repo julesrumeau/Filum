@@ -160,7 +160,7 @@
     pistes.addEventListener('mousemove', function (e) {
       var rc = fond.getBoundingClientRect();
       var f = Math.min(1, Math.max(0, (e.clientX - rc.left) / rc.width));
-      var info = F.hoverInfo(f, fr.hist, fr.allSpans, fr.min, fr.max, 6 / rc.width, fr.mixedSpans);
+      var info = F.hoverInfo(f, fr.hist, fr.allSpans, fr.min, fr.max, 6 / rc.width, fr.mixedSpans, fr.teeSpans);
       var lines = ['<strong>' + fmtDateTime(info.date) + '</strong>'];
       info.versions.slice(0, 4).forEach(function (v) { lines.push(versionLine(v, fr)); });
       if (info.versions.length > 4) lines.push('et ' + (info.versions.length - 4) + ' autre(s) version(s) toutes proches');
@@ -174,6 +174,10 @@
       if (info.mixed) {
         lines.push('<span class="melange">Membres mélangés ' + (info.mixed.end ? 'du ' + fmtDateTime(info.mixed.start.date) + ' au ' + fmtDateTime(info.mixed.end.date)
           : 'depuis le ' + fmtDateTime(info.mixed.start.date) + ' (toujours)') + '</span>');
+      }
+      if (info.tee) {
+        lines.push('<span class="melange">Raccord en T (chemin non coupé) ' + (info.tee.end ? 'du ' + fmtDateTime(info.tee.start.date) + ' au ' + fmtDateTime(info.tee.end.date)
+          : 'depuis le ' + fmtDateTime(info.tee.start.date) + ' (toujours)') + '</span>');
       }
       bulle.innerHTML = lines.join('<br>');
       bulle.hidden = false;
@@ -233,11 +237,12 @@
           + (b.left * 100) + '%;width:' + Math.max(b.width * 100, 0.6) + '%"></div>';
       }).join('');
     }
-    if (fr.mixedSpans) {
-      html += F.bandsOf(fr.mixedSpans, fr.min, fr.max).map(function (b) {
-        return '<div class="bande ordre" style="left:' + (b.left * 100) + '%;width:' + Math.max(b.width * 100, 0.6) + '%"></div>';
+    [[fr.mixedSpans, 'ordre'], [fr.teeSpans, 'ordre tee']].forEach(function (g) {
+      if (!g[0]) return;
+      html += F.bandsOf(g[0], fr.min, fr.max).map(function (b) {
+        return '<div class="bande ' + g[1] + '" style="left:' + (b.left * 100) + '%;width:' + Math.max(b.width * 100, 0.6) + '%"></div>';
       }).join('');
-    }
+    });
     html += F.tickFractions(fr.hist.map(function (v) { return v.timestamp; }), fr.min, fr.max).map(function (x) {
       return '<div class="repere" style="left:' + (x * 100) + '%"></div>';
     }).join('');
@@ -277,6 +282,7 @@
     fr.points = points;
     fr.allSpans = F.spansOf(points);
     fr.mixedSpans = F.spansOf(points, 'mixed');
+    fr.teeSpans = F.spansOf(points, 'tee');
     paintFrise();
   }
 
@@ -354,8 +360,9 @@
       if (state.frise !== fr) return;
       paintCharge();
       var spans = F.clipSpans(F.spansOf(fr.points.filter(function (p) { return p.date <= fr.to; })), fr.from);
-      var mixed = F.clipSpans(F.spansOf(fr.points.filter(function (p) { return p.date <= fr.to; }), 'mixed'), fr.from);
-      await renderSpans(out, spans, fr, mixed);
+      var upTo = fr.points.filter(function (p) { return p.date <= fr.to; });
+      var mixed = F.clipSpans(F.spansOf(upTo, 'mixed'), fr.from), tee = F.clipSpans(F.spansOf(upTo, 'tee'), fr.from);
+      await renderSpans(out, spans, fr, mixed, tee);
       if (isFull(fr)) {
         $('frise-note').textContent = '';
         if (state.snapshot !== state.live.snapshot) { useLive(); U.renderList(); await U.showMap(state.live.results[0], true); }
@@ -464,10 +471,26 @@
     U.applyPeriod();
   }
 
-  async function renderSpans(out, spans, fr, mixed) {
-    mixed = mixed || [];
+  // Sections des défauts d'ordre : membres mélangés (la liste saute) et raccords en T (un chemin non coupé à l'intersection).
+  function orderSections(mixed, tee, spanHtml) {
+    var html = '';
+    if (mixed.length) {
+      html += '<h3>Membres mélangés (ordre de la liste)</h3><p class="detail">La relation reste d\'un seul morceau, mais ses membres ne sont plus '
+        + 'dans l\'ordre du parcours (Knooppuntnet parle de membres mélangés).</p>'
+        + mixed.map(function (sp) { return spanHtml(sp, 'Membres mélangés', 'Membres encore mélangés'); }).join('');
+    }
+    if (tee.length) {
+      html += '<h3>Raccords en T (chemin non coupé à l\'intersection)</h3><p class="detail">Un chemin se pose au milieu d\'un autre : '
+        + 'sur un rond-point découpé, chaque chemin doit être coupé à chaque intersection. Couper le chemin à cet endroit règle le problème.</p>'
+        + tee.map(function (sp) { return spanHtml(sp, 'Raccord en T', 'Raccord en T encore présent'); }).join('');
+    }
+    return html;
+  }
+
+  async function renderSpans(out, spans, fr, mixed, tee) {
+    mixed = mixed || []; tee = tee || [];
     var changesets = {}, discussions = {};
-    try { changesets = await F.fetchChangesets(F.changesetIds(spans.concat(mixed))); } catch (e) { changesets = {}; }
+    try { changesets = await F.fetchChangesets(F.changesetIds(spans.concat(mixed, tee))); } catch (e) { changesets = {}; }
     try { discussions = await F.fetchDiscussions(changesets); } catch (e) { discussions = {}; }
     if (state.frise !== fr) return;
     var atDate = !fr.toIsMax;
@@ -493,11 +516,7 @@
       html += '<details class="breves"><summary>' + parts.brief.length + ' rupture(s) brève(s), de moins d\'un jour (le plus souvent '
         + 'une édition faite en plusieurs envois)</summary>' + parts.brief.map(function (sp) { return spanHtml(sp); }).join('') + '</details>';
     }
-    if (mixed.length) {
-      html += '<h3>Membres mélangés (ordre de la liste)</h3><p class="detail">La relation reste d\'un seul morceau, mais ses membres ne sont plus '
-        + 'dans l\'ordre du parcours (Knooppuntnet parle de membres mélangés).</p>'
-        + mixed.map(function (sp) { return spanHtml(sp, 'Membres mélangés', 'Membres encore mélangés'); }).join('');
-    }
+    html += orderSections(mixed, tee, spanHtml);
     var pending = F.wayIdsToLoad(fr.ctx, fr.max).length;
     html += '<p class="limite">Ce sont des pistes, pas des preuves : une modification au moment de la rupture '
       + 'n\'est pas forcément une faute (la personne a pu réparer ou raccrocher un autre chemin). '

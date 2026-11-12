@@ -312,3 +312,31 @@ test('lastWayNodes : les nœuds de la dernière version qui en avait, même si l
   assert.deepStrictEqual(lastWayNodes(ctx, 8), [5, 6]);
   assert.deepStrictEqual(lastWayNodes(ctx, 9), [], 'historique inconnu');
 });
+
+test('timeline : un raccord en T (chemin posé au milieu d\'un autre) est suivi à part des membres mélangés (retour de pyrog sur 23)', () => {
+  const ctx = {
+    relHistory: [rv(100, 1, T('2020-01-01'), [1, 2])],
+    wayHistories: {
+      1: [wv(1, 1, T('2020-01-01'), [10, 11, 12])],
+      2: [wv(2, 1, T('2020-01-01'), [12, 20]), wv(2, 2, T('2021-01-01'), [11, 20])],
+    },
+    currentWays: {},
+  };
+  const points = timeline(ctx, 100);
+  assert.deepStrictEqual(points.map(p => p.tee), [false, true]);
+  assert.deepStrictEqual(points.map(p => p.mixed), [false, false], 'pas des membres mélangés');
+  const tee = spansOf(points, 'tee');
+  assert.strictEqual(tee.length, 1);
+  assert.strictEqual(tee[0].start.date, T('2021-01-01'));
+  assert.strictEqual(spansOf(points, 'mixed').length, 0);
+});
+
+test('timeline : un saut dans la liste sans nœud commun reste des membres mélangés, pas un raccord en T', () => {
+  const ctx = {
+    relHistory: [rv(100, 1, T('2020-01-01'), [1, 2, 3]), rv(100, 2, T('2021-01-01'), [1, 3, 2])],
+    wayHistories: { 1: [wv(1, 1, T('2020-01-01'), [10, 11, 12])], 2: [wv(2, 1, T('2020-01-01'), [12, 13, 14])], 3: [wv(3, 1, T('2020-01-01'), [14, 15, 16])] },
+    currentWays: {},
+  };
+  const points = timeline(ctx, 100);
+  assert.deepStrictEqual(points.map(p => [p.mixed, p.tee]), [[false, false], [true, false]]);
+});
