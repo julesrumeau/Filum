@@ -27,6 +27,8 @@
   button.morceau { font:inherit; background:none; border:1px solid var(--bord); border-radius:4px; padding:0 6px; cursor:pointer; color:inherit; }
   svg .voie.r-forward { stroke:#e4572e; } svg .voie.r-backward { stroke:#1f5fbf; } svg .voie.r-both { stroke:#00a5b8; }
   #frise-fond .bande.ordre.tee { background:repeating-linear-gradient(90deg, var(--avert) 0 3px, transparent 3px 6px); }
+  #aide-lecture { margin:6px 0; } #aide-lecture summary { cursor:pointer; } #aide-lecture ul { margin:6px 0 6px 18px; padding:0; } #aide-lecture li { margin:4px 0; }
+  .pt { display:inline-block; width:10px; height:10px; border-radius:50%; vertical-align:middle; } .pt.rouge { background:var(--alerte); } .pt.orange { background:var(--avert); } .pt.ocre { background:#b7791f; border-radius:2px; } .pt.vert { background:#2e9e44; } .pt.noir { background:#1a1a1a; }
   .frise-bulle .melange { color:var(--avert); font-weight:bold; }
   .legende { font-weight:bold; } .legende.r-forward { color:#e4572e; } .legende.r-backward { color:#1f5fbf; } .legende.r-both { color:#00a5b8; }
   .role.role-forward { background:#fbd5cc; } .role.role-backward { background:#cfe0f7; }
@@ -128,6 +130,21 @@
       <p id="parents" class="detail"></p>
       <p id="trous" class="detail"></p>
       <div id="stats" class="detail"></div>
+      <details id="aide-lecture" class="detail">
+        <summary>Que signifient les couleurs et les symboles ?</summary>
+        <ul>
+          <li><span class="pt rouge"></span> Point rouge : un <strong>trou</strong>, deux morceaux de la relation sans aucun point commun ; le trait pointillé rouge relie les deux bouts les plus proches.</li>
+          <li><span class="pt orange"></span> Point orange : un <strong>problème d'ordre</strong>. La liste saute d'un chemin à un autre (« membres mélangés »), ou un chemin se pose au milieu d'un autre (« raccord en T », à couper à cet endroit).</li>
+          <li><span class="pt ocre"></span> Carré ocre : un nœud membre de la relation (arrêt, borne, point de passage).</li>
+          <li><strong>Couleur d'un trait</strong> : chaque morceau (suite de chemins reliés entre eux) a la sienne. Pour un itinéraire à sens : <span class="legende r-forward">rouge</span> aller (forward), <span class="legende r-backward">bleu</span> retour (backward), <span class="legende r-both">cyan</span> dans les deux sens.</li>
+          <li><strong>Triangles noirs</strong> : le sens du parcours ; <span class="pt vert"></span> point vert au départ, <span class="pt noir"></span> point noir à l'arrivée (seulement pour un itinéraire simple, déduit de l'ordre de la liste).</li>
+          <li><strong>Dans une période</strong> : trait vert = chemin créé, orange = modifié, bleu = ajouté à la relation, rouge épais pointillé = retiré ou supprimé.</li>
+          <li><strong>Trait à gauche d'un chemin dans la liste</strong> : il fait partie d'un contour fermé (coin haut au début, coin bas à la fin) ; un petit rond = chemin fermé sur lui-même.</li>
+          <li><strong>Frise</strong> : chaque trait gris est une version de la relation, une bande rouge une période de rupture, une bande orange des membres mélangés, une bande orange hachurée des raccords en T.</li>
+          <li><strong>Cliquer sur un chemin de la liste</strong> le met en évidence sur la carte ; Maj+clic cadre la carte dessus. Un clic sur un chemin de la carte le sélectionne dans la liste.</li>
+          <li><strong>Boutons de la carte</strong> : + et − (zoom), maison (vue complète), flèche (sens), losange (nœuds membres), damier (fond OpenStreetMap), crayon (ouvrir dans iD ou JOSM).</li>
+        </ul>
+      </details>
       <div id="liste"></div>
       <section id="enquete"></section>
     </div>
