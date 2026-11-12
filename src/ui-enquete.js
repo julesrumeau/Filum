@@ -160,7 +160,7 @@
     pistes.addEventListener('mousemove', function (e) {
       var rc = fond.getBoundingClientRect();
       var f = Math.min(1, Math.max(0, (e.clientX - rc.left) / rc.width));
-      var info = F.hoverInfo(f, fr.hist, fr.allSpans, fr.min, fr.max, 6 / rc.width);
+      var info = F.hoverInfo(f, fr.hist, fr.allSpans, fr.min, fr.max, 6 / rc.width, fr.mixedSpans);
       var lines = ['<strong>' + fmtDateTime(info.date) + '</strong>'];
       info.versions.slice(0, 4).forEach(function (v) { lines.push(versionLine(v, fr)); });
       if (info.versions.length > 4) lines.push('et ' + (info.versions.length - 4) + ' autre(s) version(s) toutes proches');
@@ -170,6 +170,10 @@
         }).join(', ');
         lines.push('<span class="rupture">Relation cassée ' + (sp.fromCreation ? 'dès sa création' : 'depuis le ' + fmtDateTime(sp.start.date))
           + (sp.end ? ' jusqu\'au ' + fmtDateTime(sp.end.date) : ' (toujours cassée)') + '</span>' + (who ? '<br>Début : ' + who : ''));
+      }
+      if (info.mixed) {
+        lines.push('<span class="melange">Membres mélangés ' + (info.mixed.end ? 'du ' + fmtDateTime(info.mixed.start.date) + ' au ' + fmtDateTime(info.mixed.end.date)
+          : 'depuis le ' + fmtDateTime(info.mixed.start.date) + ' (toujours)') + '</span>');
       }
       bulle.innerHTML = lines.join('<br>');
       bulle.hidden = false;

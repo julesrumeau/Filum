@@ -158,3 +158,12 @@ test('hoverInfo : toutes les versions proches du curseur sont données, pas seul
   assert.deepStrictEqual(info.versions.map(v => v.version), [3, 4]);
   assert.strictEqual(info.version.version, 3);
 });
+
+test('hoverInfo : la période de membres mélangés qui contient la date est donnée avec les trous (ticket 20)', () => {
+  const mixed = [{ start: { date: '2020-03-01T00:00:00Z', causes: [] }, end: { date: '2020-05-01T00:00:00Z', causes: [] } }];
+  const inside = hoverInfo(toFraction('2020-04-01T00:00:00Z', MIN, MAX), [], null, MIN, MAX, 0.005, mixed);
+  assert.strictEqual(inside.mixed, mixed[0]);
+  const outside = hoverInfo(toFraction('2020-07-01T00:00:00Z', MIN, MAX), [], null, MIN, MAX, 0.005, mixed);
+  assert.strictEqual(outside.mixed, null);
+  assert.strictEqual(hoverInfo(0.5, [], null, MIN, MAX, 0.005).mixed, null, 'sans périodes mélangées');
+});

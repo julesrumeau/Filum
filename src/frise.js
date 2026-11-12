@@ -63,8 +63,9 @@
   }
 
   // Ce qu'il y a sous le curseur de la souris à la fraction f : la date, la version de la relation la plus
-  // proche (à moins de tol de la frise) et toutes celles à moins de tol (versions rapprochées), la rupture qui contient la date (une rupture en cours va jusqu'au bout).
-  function hoverInfo(f, hist, spans, minIso, maxIso, tol) {
+  // proche (à moins de tol de la frise) et toutes celles à moins de tol (versions rapprochées), la période de membres
+  // mélangés (mixedSpans, facultatif) et la rupture qui contient la date (une rupture en cours va jusqu'au bout).
+  function hoverInfo(f, hist, spans, minIso, maxIso, tol, mixedSpans) {
     var date = fromFraction(f, minIso, maxIso), best = null, bestD = tol, near = [];
     (hist || []).forEach(function (v) {
       var d = Math.abs(toFraction(v.timestamp, minIso, maxIso) - f);
@@ -75,7 +76,11 @@
     (spans || []).forEach(function (sp) {
       if (!span && sp.start.date <= date && (!sp.end || date <= sp.end.date)) span = sp;
     });
-    return { date: date, version: best, versions: near.sort(function (a, b) { return a.version - b.version; }), span: span };
+    var mixed = null;
+    (mixedSpans || []).forEach(function (sp) {
+      if (!mixed && sp.start.date <= date && (!sp.end || date <= sp.end.date)) mixed = sp;
+    });
+    return { date: date, version: best, mixed: mixed, versions: near.sort(function (a, b) { return a.version - b.version; }), span: span };
   }
 
   var api = { hoverInfo: hoverInfo, estimateLoad: estimateLoad, splitSpans: splitSpans, toFraction: toFraction, fromFraction: fromFraction,
