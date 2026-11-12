@@ -261,3 +261,14 @@ test('contributorStats : un classement des auteurs de la période avec création
   assert.deepStrictEqual(s[1], { user: 'bob', created: 0, modified: 0, deleted: 1, members: 1, total: 2, changesets: 1 });
   assert.deepStrictEqual(contributorStats([]), []);
 });
+
+test('memberCount : nombre de membres d\'une version de la relation et variation depuis la précédente (message 35)', () => {
+  const { memberCount } = require('../src/changes.js');
+  const m = (ref) => ({ type: 'relation', ref, role: '' });
+  const hist = [{ version: 1, members: [m(1), m(2)] }, { version: 2, members: [m(1), m(2), m(3), m(4)] }, { version: 3, members: [m(1)] }];
+  assert.deepStrictEqual(memberCount(hist, 1), { count: 2, delta: null });
+  assert.deepStrictEqual(memberCount(hist, 2), { count: 4, delta: 2 });
+  assert.deepStrictEqual(memberCount(hist, 3), { count: 1, delta: -3 });
+  assert.strictEqual(memberCount(hist, 9), null);
+  assert.deepStrictEqual(memberCount([{ version: 1, visible: false }], 1), { count: 0, delta: null }, 'version supprimée sans membres');
+});

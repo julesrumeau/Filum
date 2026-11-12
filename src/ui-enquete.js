@@ -137,6 +137,8 @@
   // Une version de la relation dans la bulle : qui, quand, quel changeset, et ce qu'elle a changé dans les membres.
   function versionLine(v, fr) {
     var line = 'Relation v' + v.version + ' par ' + esc(v.user) + ', ' + fmtDateTime(v.timestamp) + ', changeset ' + v.changeset;
+    var n = F.memberCount(fr.hist, v.version);
+    if (n) line += ', ' + n.count + ' membre(s)' + (n.delta ? ' (' + (n.delta > 0 ? '+' : '−') + Math.abs(n.delta) + ')' : '');
     var c = F.memberChange(fr.hist, v.version);
     if (!c || !(c.added.length || c.removed.length || c.roleChanged.length)) return line;
     function names(list) {

@@ -74,6 +74,16 @@
     return t.before === undefined ? 'ajout' : t.after === undefined ? 'retrait' : 'modif';
   }
 
+  // Nombre de membres d'une version de la relation, et variation depuis la version précédente (null pour la première).
+  // null si la version n'est pas dans l'historique.
+  function memberCount(hist, version) {
+    var cur = hist.filter(function (v) { return v.version === version; })[0];
+    if (!cur) return null;
+    var before = hist.filter(function (v) { return v.version < version; }).sort(function (a, b) { return b.version - a.version; })[0];
+    var count = (cur.members || []).length;
+    return { count: count, delta: before ? count - (before.members || []).length : null };
+  }
+
   // Ce que la version `version` de la relation a changé dans ses membres, par rapport à la précédente
   // (la première version ajoute tous ses membres). null si la version n'est pas dans l'historique.
   function memberChange(hist, version) {
@@ -173,7 +183,7 @@
     });
   }
 
-  var api = { impactDates: impactDates, filterMinor: filterMinor, windowChanges: windowChanges, diffNodes: diffNodes, diffTags: diffTags, diffMembers: diffMembers, memberChange: memberChange, tagChangeKind: tagChangeKind, relationChangeSummary: relationChangeSummary, contributorStats: contributorStats };
+  var api = { impactDates: impactDates, filterMinor: filterMinor, windowChanges: windowChanges, diffNodes: diffNodes, diffTags: diffTags, diffMembers: diffMembers, memberChange: memberChange, memberCount: memberCount, tagChangeKind: tagChangeKind, relationChangeSummary: relationChangeSummary, contributorStats: contributorStats };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.Filum = Object.assign(root.Filum || {}, api);
 })(typeof self !== 'undefined' ? self : this);
