@@ -343,16 +343,16 @@
     if (g && state.directionPts) g.innerHTML = arrowsAlong(state.directionPts, view, box);
   }
 
-  // Flèches du sens à intervalle régulier À L'ÉCRAN (80 pixels) le long du parcours, seulement dans la vue : leur nombre
+  // Flèches du sens (triangles pleins cerclés de blanc, lisibles sur un tracé sinueux) à intervalle régulier À L'ÉCRAN (90 pixels) le long du parcours, seulement dans la vue : leur nombre
   // ne dépend ni du nombre de chemins ni du zoom. pts : points du parcours dans l'ordre, en unités du dessin.
   function arrowsAlong(pts, view, box) {
-    var k = view.w / box.clientWidth, gap = 80 * k, s = 6 * k, next = gap / 2, run = 0, out = '';
+    var k = view.w / box.clientWidth, gap = 90 * k, s = 8 * k, next = gap / 2, run = 0, out = '';
     for (var i = 1; i < pts.length; i++) {
       var a = pts[i - 1], b = pts[i], d = Math.hypot(b[0] - a[0], b[1] - a[1]);
       while (d > 0 && run + d >= next) {
         var t = (next - run) / d, x = a[0] + (b[0] - a[0]) * t, y = a[1] + (b[1] - a[1]) * t;
         if (x > view.x - gap && x < view.x + view.w + gap && y > view.y - gap && y < view.y + view.h + gap) {
-          out += '<path class="fleche" d="M' + (-s) + ',' + (-0.75 * s) + 'L' + (0.75 * s) + ',0L' + (-s) + ',' + (0.75 * s) + '" transform="translate('
+          out += '<path class="fleche" d="M' + (-s) + ',' + (-0.8 * s) + 'L' + (1.1 * s) + ',0L' + (-s) + ',' + (0.8 * s) + 'Z" transform="translate('
             + x.toFixed(3) + ',' + y.toFixed(3) + ') rotate(' + (Math.atan2(b[1] - a[1], b[0] - a[0]) * 180 / Math.PI).toFixed(1) + ')"/>';
         }
         next += gap;
