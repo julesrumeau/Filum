@@ -3,8 +3,34 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Filum</title>
-<link rel="icon" href="data:,">
+<title>Filum : analyseur de relations OpenStreetMap (trous, historique)</title>
+<meta name="description" content="Analysez une relation OpenStreetMap dans le navigateur : trous, ordre des chemins, sens du parcours, et qui a modifié quoi. Randonnée, vélo, bus.">
+<link rel="canonical" href="https://julesrumeau.github.io/Filum/">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  "name": "Filum",
+  "url": "https://julesrumeau.github.io/Filum/",
+  "description": "Outil libre pour analyser les relations OpenStreetMap dans le navigateur : trous et problèmes d'ordre des itinéraires de randonnée, de vélo, des lignes de bus et des limites, sens du parcours, et historique de qui a modifié quoi.",
+  "applicationCategory": "BrowserApplication",
+  "operatingSystem": "Tout système avec un navigateur récent",
+  "inLanguage": "fr",
+  "isAccessibleForFree": true
+}
+</script>
+<!-- Aperçu quand le lien est partagé (forums, messageries) : titre et phrase, sans image. Adresses absolues. -->
+<meta property="og:type" content="website">
+<meta property="og:locale" content="fr_FR">
+<meta property="og:site_name" content="Filum">
+<meta property="og:title" content="Filum : où une relation OpenStreetMap est coupée, et par qui">
+<meta property="og:description" content="Trouver les trous d'un itinéraire ou d'une limite OpenStreetMap, voir le sens du parcours et remonter l'historique pour savoir qui a modifié quoi.">
+<meta property="og:url" content="https://julesrumeau.github.io/Filum/">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Filum : où une relation OpenStreetMap est coupée, et par qui">
+<meta name="twitter:description" content="Trouver les trous d'un itinéraire ou d'une limite OpenStreetMap, voir le sens du parcours et remonter l'historique pour savoir qui a modifié quoi.">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="icon" href="favicon-48.png" sizes="48x48" type="image/png">
 <style>
   :root { --fond:#fafaf7; --texte:#1c1c1a; --doux:#6b6b66; --trace:#2b6cb0; --alerte:#d62828; --avert:#e08a00; --selection:#7b2cbf; --surligne:#efe3fb; --bon:#2f855a; --bord:#d9d9d2; }
   @media (prefers-color-scheme: dark) {
@@ -120,7 +146,7 @@
 <body>
 <main>
   <h1>Filum</h1>
-  <p class="sous">Détecte les discontinuités d'une relation OpenStreetMap.</p>
+  <p class="sous" id="intro">Filum analyse les relations OpenStreetMap (itinéraires de randonnée et de vélo, lignes de bus, limites administratives, polygones) : il montre où une relation est coupée, dans quel ordre ses chemins se suivent et dans quel sens va le parcours, puis remonte l'historique pour retrouver qui a modifié quoi, et quand.</p>
   <div class="ligne">
     <input id="relation" type="text" placeholder="Numéro ou adresse de relation (ex. 7444, r12586521, openstreetmap.org/relation/…)" aria-label="Numéro ou adresse de la relation">
     <button id="go" class="go">Analyser</button>
