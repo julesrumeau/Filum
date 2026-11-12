@@ -20,11 +20,12 @@
     return b.nodes.some(function (n) { return set.has(n); });
   }
 
-  // Rond-point : chemin FERMÉ (premier nœud = dernier) où l'on entre et sort par n'importe lequel de ses nœuds.
+  // Rond-point (junction=roundabout, ou circular, signalé par mgageo) : chemin FERMÉ (premier nœud = dernier) où l'on entre et sort par n'importe lequel de ses nœuds.
   // Un tronçon de rond-point découpé (junction=roundabout mais ouvert) se comporte comme un chemin ordinaire : on y
   // entre et sort par ses bouts, un raccord au milieu est un raccord en T (ticket 31).
   function isRoundabout(w) {
-    return !!(w.tags && w.tags.junction === 'roundabout' && w.nodes.length > 1 && w.nodes[0] === w.nodes[w.nodes.length - 1]);
+    return !!(w.tags && (w.tags.junction === 'roundabout' || w.tags.junction === 'circular') && w.nodes.length > 1
+      && w.nodes[0] === w.nodes[w.nodes.length - 1]);
   }
 
   function uniqueNodes(w) {
@@ -62,6 +63,9 @@
   // Rôles de chemins qui s'écartent de l'itinéraire principal (variante, excursion, accès, liaison).
   var SECONDARY = { alternative: 1, excursion: 1, approach: 1, connection: 1 };
   var DIRECTION = { forward: 1, backward: 1 };
+  // Quais et arrêts modélisés en chemins (transports en commun) : ils ne font pas partie du tracé de l'itinéraire,
+  // la continuité les ignore (ticket 32). Sans effet sur un polygone, dont les rôles sont outer et inner.
+  var STOPS = { platform: 1, platform_entry_only: 1, platform_exit_only: 1, stop: 1, stop_entry_only: 1, stop_exit_only: 1 };
 
   function isPolygon(rel) {
     var t = rel.tags && rel.tags.type;
@@ -164,14 +168,15 @@
     var rel = idx.rels[relationId];
     if (!rel) throw new Error('relation ' + relationId + ' absente de l\'instantané');
 
-    var missing = [], wayMembers = [];
+    var missing = [], wayMembers = [], polygon = isPolygon(rel);
     rel.members.forEach(function (m, i) {
       if (m.type !== 'way') return;
+      if (!polygon && STOPS[m.role]) return;
       var w = idx.ways[m.ref];
       if (!w) { missing.push(m.ref); return; }
       wayMembers.push({ index: i, way: w, role: m.role || '' });
     });
-    return isPolygon(rel) ? analyzePolygon(wayMembers, missing) : analyzeRoute(wayMembers, missing);
+    return polygon ? analyzePolygon(wayMembers, missing) : analyzeRoute(wayMembers, missing);
   }
 
   // Analyse la relation puis chacune de ses sous-relations (une seule fois chacune).

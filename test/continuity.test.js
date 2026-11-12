@@ -434,3 +434,42 @@ test('rond-point fermé : un raccord en T reste valide (ticket 31)', () => {
   assert.strictEqual(t.gaps.length, 0);
   assert.strictEqual(t.orderIssues.length, 0);
 });
+
+function relRoles(id, members, tags) {
+  return { type: 'relation', id, tags: tags || { type: 'route', route: 'bus' }, members: members.map(([ref, role]) => ({ type: 'way', ref, role: role || '' })) };
+}
+
+test('un chemin au rôle platform (quai modélisé en chemin) est ignoré de la continuité (ticket 32)', () => {
+  ['platform', 'platform_entry_only', 'platform_exit_only', 'stop', 'stop_entry_only', 'stop_exit_only'].forEach(role => {
+    const snap = snapshot([way(1, [10, 11, 12]), way(9, [90, 91, 92]), way(2, [12, 13, 14]), relRoles(100, [[1], [9, role], [2]])]);
+    const res = analyzeContinuity(snap, 100);
+    assert.deepStrictEqual(res.gaps, [], role);
+    assert.deepStrictEqual(res.orderIssues, [], role);
+    assert.deepStrictEqual(res.detached, [], role + ' : pas isolé non plus');
+    assert.strictEqual(res.pieces.length, 1, role);
+    assert.ok(!res.pieces.some(p => p.indexOf(1) >= 0), role + ' : le quai n\'est dans aucun morceau');
+  });
+});
+
+test('sans le rôle platform, le même chemin isolé reste un trou (ticket 32)', () => {
+  const snap = snapshot([way(1, [10, 11, 12]), way(9, [90, 91, 92]), way(2, [12, 13, 14]), relRoles(100, [[1], [9, ''], [2]])]);
+  assert.ok(analyzeContinuity(snap, 100).gaps.length > 0);
+});
+
+test('platform sur un multipolygone : le rôle ne change rien (outer et inner restent seuls pris en compte)', () => {
+  const snap = snapshot([way(1, [1, 2, 3, 1]), relRoles(100, [[1, 'platform']], { type: 'multipolygon' })]);
+  assert.doesNotThrow(() => analyzeContinuity(snap, 100));
+});
+
+test('junction=circular fermé se comporte comme un rond-point : entrée et sortie par n\'importe quel nœud (ticket 23)', () => {
+  const circ = { type: 'way', id: 2, nodes: [50, 51, 52, 53, 50], tags: { junction: 'circular' } };
+  const t = analyzeContinuity(snapshot([way(1, [10, 11, 52]), circ, way(3, [53, 60]), rel(100, [1, 2, 3])]), 100);
+  assert.deepStrictEqual(t.gaps, []);
+  assert.deepStrictEqual(t.orderIssues, []);
+});
+
+test('junction=circular ouvert reste un chemin ordinaire (ticket 23)', () => {
+  const open = { type: 'way', id: 2, nodes: [50, 51, 52, 53], tags: { junction: 'circular' } };
+  const t = analyzeContinuity(snapshot([way(1, [10, 11, 52]), open, way(3, [53, 60]), rel(100, [1, 2, 3])]), 100);
+  assert.strictEqual(t.orderIssues.length, 1);
+});
