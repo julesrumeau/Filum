@@ -6,7 +6,7 @@ Taille (estimation grossière) : S = moins d'une heure, M = quelques heures, L =
 
 ## À faire
 
-- [ ] [M] **Fenêtre sur les modifications, suite** : résumé par changeset (qui a changé quoi, en un lot), sous-relations et nœuds membres modifiés
+- [ ] [M] **Fenêtre sur les modifications, suite** : sous-relations et nœuds membres modifiés (le résumé par changeset est fait, 12/11/2026)
 - [ ] [M] **Ordre des arrêts de bus** et schéma de transport v2 (relation parente et une sous-relation par sens) : les arrêts sont affichés mais leur ordre n'est pas vérifié
 - [ ] [M] **Essayer les cas demandés par pyrog** sur des relations réelles et noter ce qui sort faux : plusieurs niveaux de sous-relations, réseau de carrefours, vélo avec `forward` et `backward`, randonnée avec rôles, parcours de santé, multipolygone (2449758 Hôtel-Dieu), limite administrative (4850451 le Rhône), relations à trous de Strasbourg (1623019, 10017827, 2910706, 48361, 9974539)
 - [ ] [S] **Retours du forum** : quand un testeur (pyrog, StC, Guy, lonvia) donne la vraie cause d'une rupture, comparer avec ce que Filum affiche ; c'est la seule validation du forensic possible sans accès à une vérité connue
@@ -45,6 +45,7 @@ Taille (estimation grossière) : S = moins d'une heure, M = quelques heures, L =
 - Ticket #5 (25/10/2026) : chemins retirés ou supprimés dessinés en pointillé rouge sur la carte de la période (`forensic.lastWayNodes`, `osmapi.fetchNodePositions`) ; mesuré sur 617169320 (retiré de 15024156 le 2023-01-06) : 11 nœuds, 5 encore positionnés, 6 supprimés lus par 6 appels d'historique
 - Ticket #1, partie alignement (25/10/2026) : le bouclage est un rail vertical dans la marge gauche (coin haut au début, coin bas à la fin, petit rond pour un chemin fermé sur lui-même), continu d'une ligne à l'autre. Reste : les rôles forward et backward (aller et retour) dans ce rail
 - Ticket #7 (25/10/2026) : contributeurs de la période (nombre, classement, créés, modifiés, supprimés, membres, changesets), replié, sans appel de plus (`changes.contributorStats`) ; sur 17032107 depuis 2025 : 13 contributeurs
+- Résumé par changeset (message 43 de pyrog, 12/11/2026) : bloc replié « N changeset(s) : ce qui a changé, lot par lot » en tête de l'enquête, une ligne par lot (changeset, auteur, heure, phrase du type « 2 chemins créés, 3 modifiés (dont 1 avec un bout changé), la relation change : +2 et −1 membre(s) », commentaire du changeset), les 40 plus récents (`changes.changesetSummary`, `changesetPhrase`) ; vérifié sur 17032107 depuis 2026-10-01 : 10 lots, 10 commentaires
 - Légende dépliable « Que signifient les couleurs et les symboles ? » (`#aide-lecture` dans index.html, texte statique) : trous, ordre, nœuds, couleurs des morceaux et des rôles, sens, période, rail, frise, boutons de la carte, Maj+clic (12/11/2026). À tenir à jour quand un symbole change
 - Retour de pyrog sur #23 (12/11/2026) : un raccord en T sur un rond-point non coupé n'est plus appelé « membres mélangés » mais « raccord en T (chemin non coupé à l'intersection) », suivi à part (`tee` dans la timeline, bandes orange hachurées, section de l'enquête, bulle de la frise) ; vérifié sur 18066950
 - Bulle de la frise (12/11/2026) : mention des périodes de membres mélangés (bandes orange) au survol, vérifié sur 17032107 (du 2026-10-09 au 2026-10-23)

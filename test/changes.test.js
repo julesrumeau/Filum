@@ -272,3 +272,32 @@ test('memberCount : nombre de membres d\'une version de la relation et variation
   assert.strictEqual(memberCount(hist, 9), null);
   assert.deepStrictEqual(memberCount([{ version: 1, visible: false }], 1), { count: 0, delta: null }, 'version supprimée sans membres');
 });
+
+const { changesetSummary, changesetPhrase } = require('../src/changes.js');
+
+test('changesetSummary : les événements regroupés par changeset, les plus récents d\'abord (message 43)', () => {
+  const ev = [
+    { kind: 'way', id: 1, action: 'created', user: 'alice', changeset: 10, date: '2020-03-01T10:00:00Z' },
+    { kind: 'way', id: 2, action: 'created', user: 'alice', changeset: 10, date: '2020-03-01T10:00:00Z' },
+    { kind: 'way', id: 3, action: 'modified', user: 'alice', changeset: 10, date: '2020-03-01T10:00:01Z', nodes: { added: [], removed: [5], endsChanged: true }, tags: [{ key: 'name' }] },
+    { kind: 'relation', id: 100, action: 'modified', user: 'alice', changeset: 10, date: '2020-03-01T10:00:02Z', members: { added: 2, removed: 0 }, tags: [] },
+    { kind: 'way', id: 4, action: 'deleted', user: 'bob', changeset: 11, date: '2020-04-01T00:00:00Z' },
+    { kind: 'way', id: 5, action: 'removed-from-relation', user: 'bob', changeset: 11, date: '2020-04-01T00:00:00Z' },
+  ];
+  const s = changesetSummary(ev);
+  assert.deepStrictEqual(s.map(x => x.changeset), [11, 10]);
+  assert.deepStrictEqual([s[1].user, s[1].date, s[1].total], ['alice', '2020-03-01T10:00:00Z', 4]);
+  assert.deepStrictEqual([s[1].created, s[1].modified, s[1].deleted], [2, 1, 0]);
+  assert.deepStrictEqual([s[1].membersAdded, s[1].membersRemoved, s[1].relation, s[1].endsChanged, s[1].tagChanges], [2, 0, true, 1, 1]);
+  assert.deepStrictEqual([s[0].deleted, s[0].removedFromRelation, s[0].relation], [1, 1, false]);
+  assert.deepStrictEqual(changesetSummary([]), []);
+});
+
+test('changesetPhrase : une phrase française avec les pluriels (message 43)', () => {
+  const base = { created: 0, modified: 0, deleted: 0, addedToRelation: 0, removedFromRelation: 0, membersAdded: 0, membersRemoved: 0, relation: false, endsChanged: 0, tagChanges: 0 };
+  assert.strictEqual(changesetPhrase(Object.assign({}, base, { created: 1 })), '1 chemin créé');
+  assert.strictEqual(changesetPhrase(Object.assign({}, base, { created: 2, modified: 3, endsChanged: 1 })), '2 chemins créés, 3 modifiés (dont 1 avec un bout changé)');
+  assert.strictEqual(changesetPhrase(Object.assign({}, base, { deleted: 1, removedFromRelation: 2 })), '1 chemin supprimé, 2 retirés de la relation');
+  assert.strictEqual(changesetPhrase(Object.assign({}, base, { relation: true, membersAdded: 2, membersRemoved: 1 })), 'la relation change : +2 et −1 membre(s)');
+  assert.strictEqual(changesetPhrase(Object.assign({}, base, { modified: 1, tagChanges: 2 })), '1 chemin modifié, tags changés 2 fois');
+});

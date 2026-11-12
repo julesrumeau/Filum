@@ -69,6 +69,48 @@
     }).sort(function (a, b) { return b.total - a.total || (a.user < b.user ? -1 : 1); });
   }
 
+  // Les événements d'une période regroupés par changeset (un lot de modifications d'un même contributeur), les plus
+  // récents d'abord : ce que chaque lot a créé, modifié, supprimé, ajouté ou retiré de la relation.
+  function changesetSummary(events) {
+    var by = {};
+    events.forEach(function (e) {
+      var c = by[e.changeset] = by[e.changeset] || { changeset: e.changeset, user: e.user, date: e.date, total: 0, created: 0, modified: 0, deleted: 0,
+        addedToRelation: 0, removedFromRelation: 0, membersAdded: 0, membersRemoved: 0, relation: false, endsChanged: 0, tagChanges: 0 };
+      c.total++;
+      if (e.date < c.date) c.date = e.date;
+      if (e.tags && e.tags.length) c.tagChanges++;
+      if (e.kind === 'relation') {
+        c.relation = true;
+        if (e.members) { c.membersAdded += e.members.added || 0; c.membersRemoved += e.members.removed || 0; }
+        return;
+      }
+      if (e.action === 'created') c.created++;
+      else if (e.action === 'deleted') c.deleted++;
+      else if (e.action === 'added-to-relation') c.addedToRelation++;
+      else if (e.action === 'removed-from-relation') c.removedFromRelation++;
+      else c.modified++;
+      if (e.nodes && e.nodes.endsChanged) c.endsChanged++;
+    });
+    return Object.keys(by).map(function (k) { return by[k]; }).sort(function (a, b) {
+      return a.date < b.date ? 1 : a.date > b.date ? -1 : b.changeset - a.changeset;
+    });
+  }
+
+  // Une phrase pour un lot : « 2 chemins créés, 3 modifiés (dont 1 avec un bout changé), la relation change : +2 et −1 membre(s) ».
+  function changesetPhrase(c) {
+    var items = [
+      [c.created, 'créé', 'créés'], [c.modified, 'modifié', 'modifiés'], [c.deleted, 'supprimé', 'supprimés'],
+      [c.addedToRelation, 'ajouté à la relation', 'ajoutés à la relation'], [c.removedFromRelation, 'retiré de la relation', 'retirés de la relation'],
+    ].filter(function (i) { return i[0] > 0; });
+    var parts = items.map(function (i, k) {
+      var s = i[0] + (k === 0 ? ' chemin' + (i[0] > 1 ? 's' : '') : '') + ' ' + (i[0] > 1 ? i[2] : i[1]);
+      return i[1] === 'modifié' && c.endsChanged ? s + ' (dont ' + c.endsChanged + ' avec un bout changé)' : s;
+    });
+    if (c.tagChanges) parts.push('tags changés ' + c.tagChanges + ' fois');
+    if (c.relation) parts.push(c.membersAdded || c.membersRemoved ? 'la relation change : +' + c.membersAdded + ' et −' + c.membersRemoved + ' membre(s)' : 'la relation est modifiée');
+    return parts.join(', ');
+  }
+
   // Nature d'un changement de tag ({ key, before, after }) : ajout, modif ou retrait.
   function tagChangeKind(t) {
     return t.before === undefined ? 'ajout' : t.after === undefined ? 'retrait' : 'modif';
@@ -183,7 +225,7 @@
     });
   }
 
-  var api = { impactDates: impactDates, filterMinor: filterMinor, windowChanges: windowChanges, diffNodes: diffNodes, diffTags: diffTags, diffMembers: diffMembers, memberChange: memberChange, memberCount: memberCount, tagChangeKind: tagChangeKind, relationChangeSummary: relationChangeSummary, contributorStats: contributorStats };
+  var api = { changesetSummary: changesetSummary, changesetPhrase: changesetPhrase, impactDates: impactDates, filterMinor: filterMinor, windowChanges: windowChanges, diffNodes: diffNodes, diffTags: diffTags, diffMembers: diffMembers, memberChange: memberChange, memberCount: memberCount, tagChangeKind: tagChangeKind, relationChangeSummary: relationChangeSummary, contributorStats: contributorStats };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.Filum = Object.assign(root.Filum || {}, api);
 })(typeof self !== 'undefined' ? self : this);

@@ -403,6 +403,36 @@
       + (shapes.unresolved ? ' (' + shapes.unresolved + ' nœud(s) sans position retrouvée)' : '') + '.';
   }
 
+  // Résumé par changeset, replié : pour chaque lot de modifications, qui, quand, ce qui a changé en une phrase, puis
+  // (dès qu'on l'a) le commentaire du changeset. Les 40 lots les plus récents, commentaires lus pour ces 40 seulement.
+  function renderChangesets(list) {
+    var host = $('enquete-res') || $('enquete'), box = $('lots');
+    if (!box) {
+      box = document.createElement('div'); box.id = 'lots';
+      var after = $('contributeurs');
+      host.insertBefore(box, after ? after.nextSibling : host.firstChild);
+    }
+    if (!list.length) { box.innerHTML = ''; return; }
+    var shown = list.slice(0, 40);
+    function rows(comments) {
+      return shown.map(function (c) {
+        var cm = comments && comments[c.changeset];
+        return '<li><strong>' + osmLink('changeset', c.changeset) + '</strong> par ' + F.userLink(c.user) + ', ' + fmtDateTime(c.date) + ' : '
+          + esc(F.changesetPhrase(c)) + (cm && cm.comment ? '<br><span class="detail">« ' + esc(F.clip(cm.comment)) + ' »</span>' : '') + '</li>';
+      }).join('');
+    }
+    function draw(comments) {
+      box.innerHTML = '<details><summary>' + list.length + ' changeset(s) : ce qui a changé, lot par lot</summary><ol class="lots">' + rows(comments) + '</ol>'
+        + (list.length > shown.length ? '<p class="detail">et ' + (list.length - shown.length) + ' lot(s) plus ancien(s) non listé(s)</p>' : '') + '</details>';
+    }
+    draw(null);
+    F.fetchChangesets(shown.map(function (c) { return c.changeset; })).then(function (cs) {
+      var open = box.querySelector('details') && box.querySelector('details').open;
+      draw(cs);
+      if (open) box.querySelector('details').open = true;
+    }).catch(function () { /* les commentaires sont facultatifs */ });
+  }
+
   // Contributeurs de la période, repliés : qui a fait combien (tous les événements, mineurs compris).
   function renderContributors(stats) {
     var host = $('enquete-res') || $('enquete'), box = $('contributeurs');
@@ -430,6 +460,7 @@
   async function showWindow(fr) {
     var events = F.windowChanges(fr.ctx, fr.relId, fr.from, fr.to), snap, results, tree, minor = 0;
     renderContributors(F.contributorStats(events));
+    renderChangesets(F.changesetSummary(events));
     if (state.hideMinor && fr.points) {
       var kept = F.filterMinor(events, F.impactDates(fr.points));
       minor = events.length - kept.length;
