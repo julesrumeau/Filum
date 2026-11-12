@@ -81,3 +81,28 @@ test('routeDirection : une boucle avec une branche ou une liste mélangée n\'a 
   const ways = [m(1, [10, 11]), m(2, [11, 12]), m(3, [12, 13]), m(4, [13, 14]), m(5, [14, 10])];
   assert.strictEqual(routeDirection([ways[0], ways[2], ways[4], ways[1], ways[3]]), null, 'liste mélangée');
 });
+
+const { rolePaths, roleKind } = require('../src/sens.js');
+
+test('roleKind : forward, backward ou dans les deux sens (aucun rôle, ou main), les autres rôles sont ignorés (ticket 1)', () => {
+  assert.strictEqual(roleKind('forward'), 'forward');
+  assert.strictEqual(roleKind('backward'), 'backward');
+  assert.strictEqual(roleKind(''), 'both');
+  assert.strictEqual(roleKind(undefined), 'both');
+  assert.strictEqual(roleKind('main'), 'both');
+  assert.strictEqual(roleKind('alternative'), null);
+  assert.strictEqual(roleKind('platform'), null);
+});
+
+test('rolePaths : les chemins forward et backward avec leur sens de circulation, rien pour les autres (ticket 1)', () => {
+  const r = rolePaths([m(1, [10, 11, 12], 'forward'), m(2, [20, 21], 'backward'), m(3, [30, 31], ''), m(4, [40, 41], 'platform')]);
+  assert.deepStrictEqual(r.hasDirections, true);
+  assert.deepStrictEqual(r.paths.map(p => [p.ref, p.kind, p.nodes]), [[1, 'forward', [10, 11, 12]], [2, 'backward', [21, 20]]]);
+  assert.deepStrictEqual(r.kinds, { 1: 'forward', 2: 'backward', 3: 'both' });
+});
+
+test('rolePaths : sans forward ni backward, hasDirections est faux (ticket 1)', () => {
+  const r = rolePaths([m(1, [10, 11], ''), m(2, [11, 12], 'main')]);
+  assert.strictEqual(r.hasDirections, false);
+  assert.deepStrictEqual(r.paths, []);
+});

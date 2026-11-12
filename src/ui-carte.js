@@ -72,6 +72,8 @@
     });
     var dir = state.direction;
     box.innerHTML = (tools.length ? '<p class="detail">Voir aussi, un outil plus spécialisé : ' + tools.join(' · ') + '</p>' : '')
+      + (state.roles ? '<p class="detail">Itinéraire à sens : <span class="legende r-forward">rouge</span> aller (forward), <span class="legende r-backward">bleu</span> retour (backward), '
+        + '<span class="legende r-both">cyan</span> dans les deux sens ; les flèches montrent le sens de circulation de chaque chemin.</p>' : '')
       + (dir ? '<p class="detail">Sens du parcours, déduit de l\'ordre de la liste : ' + (dir.loop
         ? 'boucle, départ et arrivée au nœud ' + osmLink('node', dir.start) + ' (point vert)'
         : 'du nœud ' + osmLink('node', dir.start) + ' (point vert) au nœud ' + osmLink('node', dir.end) + ' (point noir)')
@@ -141,17 +143,18 @@
   function directionSvg(dir, X, Y) {
     var ways = {}, out = '<g class="sens-fleches"></g>';
     state.snapshot.elements.forEach(function (e) { if (e.type === 'way') ways[e.id] = e; });
-    state.directionPts = [];
+    var pts = [];
     dir.path.forEach(function (it) {
       var ids = ways[it.ref].nodes.slice();
       if (!it.forward) ids.reverse();
       ids.forEach(function (id) {
         var n = state.nodes[id];
         if (!n || typeof n.lat !== 'number') return;
-        var q = [Number(X(n)), Number(Y(n))], last = state.directionPts[state.directionPts.length - 1];
-        if (!last || last[0] !== q[0] || last[1] !== q[1]) state.directionPts.push(q);
+        var q = [Number(X(n)), Number(Y(n))], last = pts[pts.length - 1];
+        if (!last || last[0] !== q[0] || last[1] !== q[1]) pts.push(q);
       });
     });
+    state.directionLines = [pts];
     // Une boucle revient à son point de départ : un seul repère.
     (dir.loop ? [[dir.start, 'depart', 'Départ et arrivée (boucle)']] : [[dir.start, 'depart', 'Départ'], [dir.end, 'arrivee', 'Arrivée']]).forEach(function (e) {
       var n = state.nodes[e[0]];
@@ -160,15 +163,51 @@
     return out;
   }
 
-  // Garde le sens de la relation affichée dans state.direction et rend ses repères (vide si le sens n'est pas déduit).
-  function directionMarks(relId, X, Y) {
+  // Itinéraire à sens (rôles forward et backward) : sens de circulation de chaque chemin, d'après son rôle.
+  function roleInfoOf(relId) {
+    var rel = state.snapshot.elements.filter(function (e) { return e.type === 'relation' && e.id === relId; })[0];
+    if (!rel || state.window) return null;
+    var ways = {}, members = [];
+    state.snapshot.elements.forEach(function (e) { if (e.type === 'way') ways[e.id] = e; });
+    rel.members.forEach(function (mb) {
+      if (mb.type === 'way' && ways[mb.ref]) members.push({ ref: mb.ref, nodes: ways[mb.ref].nodes, role: mb.role || '' });
+    });
+    var info = F.rolePaths(members);
+    return info.hasDirections ? info : null;
+  }
+
+  // Flèches de circulation des chemins forward et backward : une polyligne par chemin, dans le sens où l'on circule.
+  function roleLines(info, X, Y) {
+    return info.paths.map(function (p) {
+      return p.nodes.map(function (id) { return state.nodes[id]; }).filter(function (n) { return n && typeof n.lat === 'number'; })
+        .map(function (n) { return [Number(X(n)), Number(Y(n))]; });
+    }).filter(function (l) { return l.length > 1; });
+  }
+
+  // Lit le sens de la relation affichée : state.direction (itinéraire simple) ou state.roles (rôles forward et backward).
+  function readDirections(relId) {
     state.direction = directionOf(relId);
-    state.directionPts = null;
-    return state.direction ? directionSvg(state.direction, X, Y) : '';
+    state.roles = state.direction ? null : roleInfoOf(relId);
+    state.directionLines = null;
+  }
+
+  // Les repères du sens à dessiner (départ, arrivée et flèches), vides si aucun sens n'est connu.
+  function directionMarks(X, Y) {
+    if (state.roles) state.directionLines = roleLines(state.roles, X, Y);
+    return state.direction ? directionSvg(state.direction, X, Y) : state.roles ? '<g class="sens-fleches"></g>' : '';
+  }
+
+  // Couleur d'un chemin : selon son rôle (rouge aller, bleu retour, cyan les deux sens, comme dans JOSM) pour un
+  // itinéraire à sens, sinon selon son morceau.
+  function lineClass(id, pieces) {
+    var kinds = state.roles && state.roles.kinds;
+    if (kinds && kinds[id]) return ' r-' + kinds[id];
+    return pieces[id] !== undefined ? ' p' + (pieces[id] % PIECE_COLORS) : '';
   }
 
   function renderMap(result) {
     var nodes = state.nodes, ways = {};
+    readDirections(result.relationId);
     state.snapshot.elements.forEach(function (e) { if (e.type === 'way') ways[e.id] = e; });
     var lines = [], pts = [];
     var pieces = {};
@@ -212,7 +251,7 @@
       var pts2 = l.pts.map(function (q) { return X(q) + ',' + Y(q); }).join(' ');
       svg += '<polyline class="touche" fill="none" stroke="transparent" stroke-width="14" vector-effect="non-scaling-stroke" '
         + 'data-sel="way:' + l.id + '" points="' + pts2 + '"/>'
-        + '<polyline class="voie ' + (l.action || '') + (pieces[l.id] !== undefined ? ' p' + (pieces[l.id] % PIECE_COLORS) : '') + '" fill="none" stroke="var(--trace)" stroke-width="2" vector-effect="non-scaling-stroke" '
+        + '<polyline class="voie ' + (l.action || '') + lineClass(l.id, pieces) + '" fill="none" stroke="var(--trace)" stroke-width="2" vector-effect="non-scaling-stroke" '
         + 'data-way="' + l.id + '" points="' + pts2 + '"/>';
     });
     // Trait pointillé entre les deux bouts libres les plus proches du trou
@@ -250,18 +289,18 @@
       dots(r.gaps, 'var(--alerte)', 'gap', r.relationId);
       dots([{ fromEnds: r.openEnds, toEnds: [] }], 'var(--alerte)', 'open', r.relationId);
     });
-    svg += directionMarks(result.relationId, X, Y); // au-dessus des carrés de nœuds membres, sinon un arrêt cache le départ
+    svg += directionMarks(X, Y); // au-dessus des carrés de nœuds membres, sinon un arrêt cache le départ
     box.innerHTML = svg + '</svg>'
       + '<div class="zoom"><button data-z="in" aria-label="Zoom avant">+</button>'
       + '<button data-z="out" aria-label="Zoom arrière">&minus;</button>'
       + '<button data-z="reset" aria-label="Vue complète">&#8962;</button>'
-      + (state.direction ? '<button data-z="sens" aria-label="Sens du parcours" title="Sens du parcours (déduit de l\'ordre de la liste)" class="sens' + (state.sensOff ? '' : ' actif') + '">&#10142;</button>' : '')
+      + ((state.direction || state.roles) ? '<button data-z="sens" aria-label="Sens du parcours" title="Sens du parcours (déduit de l\'ordre de la liste)" class="sens' + (state.sensOff ? '' : ' actif') + '">&#10142;</button>' : '')
       + (nodeRows.length ? '<button data-z="noeuds" aria-label="Nœuds membres" title="Nœuds membres (arrêts, bornes...)" class="noeuds' + (state.nodesOff ? '' : ' actif') + '">&#9670;</button>' : '')
       + '<button data-z="fond" aria-label="Fond de carte OpenStreetMap" title="Fond de carte OpenStreetMap" class="fond' + (state.fondOn ? ' actif' : '') + '">&#9638;</button>'
       + '<button data-z="editer" aria-label="Modifier avec un éditeur" title="Modifier avec un éditeur (iD, JOSM, Vespucci)">&#9998;</button></div>'
       + '<div class="attrib" ' + (state.fondOn ? '' : 'hidden') + '>&copy; contributeurs <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a></div>';
     if (nodeRows.length && state.nodesOff) box.querySelector('svg').classList.add('cache-noeuds');
-    if (state.direction && state.sensOff) box.querySelector('svg').classList.add('cache-sens');
+    if ((state.direction || state.roles) && state.sensOff) box.querySelector('svg').classList.add('cache-sens');
     state.map = setupZoom(box, { x: 0, y: 0, w: W, h: H });
     renderStats(result.relationId);
     if (state.selected) U.highlightMap(state.selected);
@@ -343,7 +382,7 @@
       q.setAttribute('width', 2 * half); q.setAttribute('height', 2 * half);
     });
     var g = svg.querySelector('g.sens-fleches');
-    if (g && state.directionPts) g.innerHTML = arrowsAlong(state.directionPts, view, box);
+    if (g && state.directionLines) g.innerHTML = state.directionLines.map(function (l) { return arrowsAlong(l, view, box); }).join('');
   }
 
   // Flèches du sens (triangles pleins cerclés de blanc, lisibles sur un tracé sinueux) à intervalle régulier À L'ÉCRAN (90 pixels) le long du parcours, seulement dans la vue : leur nombre

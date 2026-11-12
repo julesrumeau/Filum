@@ -87,7 +87,30 @@
 
   function result(path) { return { path: path, start: path[0].from, end: path[path.length - 1].to }; }
 
-  var api = { routeDirection: routeDirection };
+  // Sens de circulation d'un chemin selon son rôle dans la relation : forward (dans l'ordre de ses nœuds), backward
+  // (à l'envers), both (aucun rôle ou main : dans les deux sens). null pour tout autre rôle (variante, quai, arrêt...).
+  function roleKind(role) {
+    if (role === 'forward' || role === 'backward') return role;
+    return !role || role === 'main' ? 'both' : null;
+  }
+
+  // Pour un itinéraire à sens (vélo, voiture, bus) : les chemins forward et backward avec leurs nœuds dans le sens de
+  // circulation, et le type de chaque chemin (kinds, par identifiant). hasDirections : il y a au moins un rôle forward ou
+  // backward. members : [{ ref, nodes, role }].
+  function rolePaths(members) {
+    var out = { hasDirections: false, paths: [], kinds: {} };
+    members.forEach(function (m) {
+      var kind = roleKind(m.role);
+      if (!kind) return;
+      out.kinds[m.ref] = kind;
+      if (kind === 'both') return;
+      out.hasDirections = true;
+      out.paths.push({ ref: m.ref, kind: kind, nodes: kind === 'forward' ? m.nodes.slice() : m.nodes.slice().reverse() });
+    });
+    return out;
+  }
+
+  var api = { roleKind: roleKind, rolePaths: rolePaths, routeDirection: routeDirection };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.Filum = Object.assign(root.Filum || {}, api);
 })(typeof self !== 'undefined' ? self : this);

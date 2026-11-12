@@ -4,6 +4,9 @@
   var F = window.Filum, U = window.FilumUI, $ = U.$, state = U.state, setStatus = U.setStatus, isHole = U.isHole, isWarning = U.isWarning;
   var esc = F.esc, fmtDate = F.fmtDate, osmLink = F.osmLink, fmtKm = F.fmtKm, clip = F.clip;
 
+  // Classe de couleur de l'étiquette d'un rôle d'itinéraire à sens (forward, backward), aucune pour les autres.
+  function roleClass(role) { return role === 'forward' || role === 'backward' ? ' role-' + role : ''; }
+
   function metaText(n) {
     if (!n.version) return '';
     return 'v' + n.version + ' · ' + F.userLink(n.user) + ' · ' + fmtDate(n.timestamp);
@@ -136,7 +139,7 @@
   function rowHtml(n) {
     if (n.removed) {
       return '<span class="pastille mauvais" title="Retiré ou supprimé dans la période"></span>' + (n.kind === 'way' ? 'chemin ' : n.kind === 'node' ? 'nœud ' : 'relation ')
-        + osmLink(n.kind, n.id) + (n.role ? '<span class="role">' + esc(n.role) + '</span>' : '')
+        + osmLink(n.kind, n.id) + (n.role ? '<span class="role' + roleClass(n.role) + '">' + esc(n.role) + '</span>' : '')
         + ' <span class="detail">n\'est plus dans la relation à la date de fin</span>';
     }
     if (n.kind === 'gap') {
@@ -152,7 +155,7 @@
         + (n.touching ? ' (raccord en T : ils se touchent ailleurs qu\'à un bout, couper un des deux chemins à cet endroit règle le problème)'
           : ' (aucun nœud commun : la liste saute d\'un chemin à un autre, la relation reste reliée par d\'autres chemins)');
     }
-    var role = n.role ? '<span class="role">' + esc(n.role) + '</span>' : '';
+    var role = n.role ? '<span class="role' + roleClass(n.role) + '">' + esc(n.role) + '</span>' : '';
     if (n.kind === 'relation') {
       if (n.cycle) return '<div class="ligne-arbre">relation ' + osmLink('relation', n.id) + ' (déjà dans l\'arbre plus haut, cycle)' + role + '</div>';
       if (n.missing) return '<div class="ligne-arbre">relation ' + osmLink('relation', n.id) + ' absente des données chargées' + role + '</div>';
