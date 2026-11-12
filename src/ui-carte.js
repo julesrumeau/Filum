@@ -4,6 +4,9 @@
   var F = window.Filum, U = window.FilumUI, $ = U.$, state = U.state, setStatus = U.setStatus, isHole = U.isHole, isWarning = U.isWarning;
   var esc = F.esc, fmtDate = F.fmtDate, osmLink = F.osmLink, fmtKm = F.fmtKm, clip = F.clip;
 
+  // Nombre de couleurs distinctes pour les morceaux d'une relation (classes p0 à p9 et sw0 à sw9 de index.html).
+  var PIECE_COLORS = 10;
+
   function visibleWayRefs(relId) {
     var refs = F.wayRefsOf(state.snapshot, relId);
     return state.window ? refs.filter(function (id) { return state.window.ways[id]; }) : refs;
@@ -42,7 +45,7 @@
     if (!res || res.isPolygon || res.pieces.length < 2) return [];
     var lines = F.pieceStats(state.snapshot, res, state.nodes).map(function (p, k) {
       return '<button class="morceau" data-piece="' + k + '" data-rel="' + res.relationId + '" title="Mettre ce morceau en évidence sur la carte">'
-        + '<span class="pastille-morceau sw' + (k % 6) + '"></span> morceau ' + (k + 1) + '</button> : ' + p.ways + ' chemin(s), ' + p.nodes + ' nœud(s), '
+        + '<span class="pastille-morceau sw' + (k % PIECE_COLORS) + '"></span> morceau ' + (k + 1) + '</button> : ' + p.ways + ' chemin(s), ' + p.nodes + ' nœud(s), '
         + fmtKm(p.km) + (p.closed ? ' · boucle fermée' : '');
     });
     return ['Morceaux (séparés par un trou) :<br>' + lines.join('<br>')];
@@ -156,7 +159,7 @@
       var pts2 = l.pts.map(function (q) { return X(q) + ',' + Y(q); }).join(' ');
       svg += '<polyline class="touche" fill="none" stroke="transparent" stroke-width="14" vector-effect="non-scaling-stroke" '
         + 'data-sel="way:' + l.id + '" points="' + pts2 + '"/>'
-        + '<polyline class="voie ' + (l.action || '') + (pieces[l.id] !== undefined ? ' p' + (pieces[l.id] % 6) : '') + '" fill="none" stroke="var(--trace)" stroke-width="2" vector-effect="non-scaling-stroke" '
+        + '<polyline class="voie ' + (l.action || '') + (pieces[l.id] !== undefined ? ' p' + (pieces[l.id] % PIECE_COLORS) : '') + '" fill="none" stroke="var(--trace)" stroke-width="2" vector-effect="non-scaling-stroke" '
         + 'data-way="' + l.id + '" points="' + pts2 + '"/>';
     });
     // Trait pointillé entre les deux bouts libres les plus proches du trou
