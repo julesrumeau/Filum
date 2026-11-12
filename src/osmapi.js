@@ -118,7 +118,8 @@
       });
       level = Object.keys(next).map(Number);
     }
-    var ways = await fetchBulk('way', Object.keys(wayIds).map(Number), get);
+    // Un chemin supprimé depuis est renvoyé sans nœuds (visible: false) : on l'écarte, la continuité le compte comme absent.
+    var ways = (await fetchBulk('way', Object.keys(wayIds).map(Number), get)).filter(function (w) { return w.visible !== false; });
     return { elements: elements.concat(ways) };
   }
 

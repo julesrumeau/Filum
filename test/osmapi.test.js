@@ -525,3 +525,13 @@ test('fetchTree avec une relation de départ imposée : elle remplace la lecture
   assert.deepStrictEqual(snap.elements.map(e => e.type + e.id).sort(), ['relation100', 'way10']);
   assert.ok(!api.calls.some(c => c.startsWith('relations.json')), 'la racine n\'est pas relue');
 });
+
+test('un chemin supprimé (visible: false, sans nœuds) est écarté de l\'instantané au lieu de faire planter l\'analyse (message 36)', async () => {
+  const db = {
+    relation1: R(1, [{ type: 'way', ref: 10, role: '' }, { type: 'way', ref: 11, role: '' }]),
+    way10: W(10, [100, 101]),
+    way11: { type: 'way', id: 11, visible: false, version: 3 },
+  };
+  const snap = await fetchTree(1, fakeApi(db).getJson);
+  assert.deepStrictEqual(snap.elements.map(e => e.type + e.id).sort(), ['relation1', 'way10']);
+});
