@@ -70,7 +70,10 @@
     var tools = F.toolLinks(rel && rel.tags, relId).map(function (l) {
       return '<a href="' + esc(l.url) + '" target="_blank" rel="noopener">' + esc(l.name) + '</a>';
     });
+    var dir = state.direction;
     box.innerHTML = (tools.length ? '<p class="detail">Voir aussi, un outil plus spécialisé : ' + tools.join(' · ') + '</p>' : '')
+      + (dir ? '<p class="detail">Sens du parcours, déduit de l\'ordre de la liste : du nœud ' + osmLink('node', dir.start) + ' (point vert) au nœud '
+        + osmLink('node', dir.end) + ' (point noir). Affiché seulement pour un itinéraire simple, sans branche ni boucle.</p>' : '')
       + '<details><summary>Statistiques de la relation</summary><div class="stats">' + rows.join('<br>') + '</div></details>';
     var res = state.results.filter(function (r) { return r.relationId === relId; })[0];
     if (res && res.isPolygon) {
@@ -112,6 +115,53 @@
       var p = removed[id].map(function (n) { return state.nodes[n]; }).filter(function (n) { return n && typeof n.lat === 'number'; });
       return p.length > 1 ? { id: id, pts: p, action: 'removed' } : null;
     }).filter(Boolean);
+  }
+
+  var STOP_ROLE = /^(platform|stop)(_entry_only|_exit_only)?$/;
+
+  // Sens de parcours d'un itinéraire simple (voir sens.js) : les chemins directs de la relation affichée, quais et arrêts écartés.
+  function directionOf(relId) {
+    var res = state.results.filter(function (r) { return r.relationId === relId; })[0];
+    var rel = state.snapshot.elements.filter(function (e) { return e.type === 'relation' && e.id === relId; })[0];
+    if (!res || !rel || res.isPolygon || state.window) return null;
+    var ways = {}, members = [], bad = false;
+    state.snapshot.elements.forEach(function (e) { if (e.type === 'way') ways[e.id] = e; });
+    rel.members.forEach(function (mb) {
+      if (mb.type !== 'way' || STOP_ROLE.test(mb.role || '')) return;
+      if (!ways[mb.ref]) { bad = true; return; }
+      members.push({ ref: mb.ref, nodes: ways[mb.ref].nodes, role: mb.role || '' });
+    });
+    return bad ? null : F.routeDirection(members);
+  }
+
+  // Le parcours en points du dessin (state.directionPts, les flèches s'y posent à chaque zoom), et le départ (vert)
+  // et l'arrivée (noir).
+  function directionSvg(dir, X, Y) {
+    var ways = {}, out = '<g class="sens-fleches"></g>';
+    state.snapshot.elements.forEach(function (e) { if (e.type === 'way') ways[e.id] = e; });
+    state.directionPts = [];
+    dir.path.forEach(function (it) {
+      var ids = ways[it.ref].nodes.slice();
+      if (!it.forward) ids.reverse();
+      ids.forEach(function (id) {
+        var n = state.nodes[id];
+        if (!n || typeof n.lat !== 'number') return;
+        var q = [Number(X(n)), Number(Y(n))], last = state.directionPts[state.directionPts.length - 1];
+        if (!last || last[0] !== q[0] || last[1] !== q[1]) state.directionPts.push(q);
+      });
+    });
+    [[dir.start, 'depart', 'Départ'], [dir.end, 'arrivee', 'Arrivée']].forEach(function (e) {
+      var n = state.nodes[e[0]];
+      if (n && typeof n.lat === 'number') out += '<circle class="' + e[1] + '" cx="' + X(n) + '" cy="' + Y(n) + '"><title>' + e[2] + ' (sens déduit de l\'ordre de la liste)</title></circle>';
+    });
+    return out;
+  }
+
+  // Garde le sens de la relation affichée dans state.direction et rend ses repères (vide si le sens n'est pas déduit).
+  function directionMarks(relId, X, Y) {
+    state.direction = directionOf(relId);
+    state.directionPts = null;
+    return state.direction ? directionSvg(state.direction, X, Y) : '';
   }
 
   function renderMap(result) {
@@ -197,15 +247,18 @@
       dots(r.gaps, 'var(--alerte)', 'gap', r.relationId);
       dots([{ fromEnds: r.openEnds, toEnds: [] }], 'var(--alerte)', 'open', r.relationId);
     });
+    svg += directionMarks(result.relationId, X, Y); // au-dessus des carrés de nœuds membres, sinon un arrêt cache le départ
     box.innerHTML = svg + '</svg>'
       + '<div class="zoom"><button data-z="in" aria-label="Zoom avant">+</button>'
       + '<button data-z="out" aria-label="Zoom arrière">&minus;</button>'
       + '<button data-z="reset" aria-label="Vue complète">&#8962;</button>'
+      + (state.direction ? '<button data-z="sens" aria-label="Sens du parcours" title="Sens du parcours (déduit de l\'ordre de la liste)" class="sens' + (state.sensOff ? '' : ' actif') + '">&#10142;</button>' : '')
       + (nodeRows.length ? '<button data-z="noeuds" aria-label="Nœuds membres" title="Nœuds membres (arrêts, bornes...)" class="noeuds' + (state.nodesOff ? '' : ' actif') + '">&#9670;</button>' : '')
       + '<button data-z="fond" aria-label="Fond de carte OpenStreetMap" title="Fond de carte OpenStreetMap" class="fond' + (state.fondOn ? ' actif' : '') + '">&#9638;</button>'
       + '<button data-z="editer" aria-label="Modifier avec un éditeur" title="Modifier avec un éditeur (iD, JOSM, Vespucci)">&#9998;</button></div>'
       + '<div class="attrib" ' + (state.fondOn ? '' : 'hidden') + '>&copy; contributeurs <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a></div>';
     if (nodeRows.length && state.nodesOff) box.querySelector('svg').classList.add('cache-noeuds');
+    if (state.direction && state.sensOff) box.querySelector('svg').classList.add('cache-sens');
     state.map = setupZoom(box, { x: 0, y: 0, w: W, h: H });
     renderStats(result.relationId);
     if (state.selected) U.highlightMap(state.selected);
@@ -279,6 +332,36 @@
     return best;
   }
 
+  // Marques de taille fixe à l'écran : carrés des nœuds membres, flèches du sens (masquées sur un chemin trop court).
+  function scaleMarks(svg, view, box) {
+    var half = 5 * view.w / box.clientWidth;
+    Array.prototype.forEach.call(svg.querySelectorAll('rect.noeud-membre'), function (q) {
+      q.setAttribute('x', Number(q.getAttribute('data-cx')) - half); q.setAttribute('y', Number(q.getAttribute('data-cy')) - half);
+      q.setAttribute('width', 2 * half); q.setAttribute('height', 2 * half);
+    });
+    var g = svg.querySelector('g.sens-fleches');
+    if (g && state.directionPts) g.innerHTML = arrowsAlong(state.directionPts, view, box);
+  }
+
+  // Flèches du sens à intervalle régulier À L'ÉCRAN (80 pixels) le long du parcours, seulement dans la vue : leur nombre
+  // ne dépend ni du nombre de chemins ni du zoom. pts : points du parcours dans l'ordre, en unités du dessin.
+  function arrowsAlong(pts, view, box) {
+    var k = view.w / box.clientWidth, gap = 80 * k, s = 6 * k, next = gap / 2, run = 0, out = '';
+    for (var i = 1; i < pts.length; i++) {
+      var a = pts[i - 1], b = pts[i], d = Math.hypot(b[0] - a[0], b[1] - a[1]);
+      while (d > 0 && run + d >= next) {
+        var t = (next - run) / d, x = a[0] + (b[0] - a[0]) * t, y = a[1] + (b[1] - a[1]) * t;
+        if (x > view.x - gap && x < view.x + view.w + gap && y > view.y - gap && y < view.y + view.h + gap) {
+          out += '<path class="fleche" d="M' + (-s) + ',' + (-0.75 * s) + 'L' + (0.75 * s) + ',0L' + (-s) + ',' + (0.75 * s) + '" transform="translate('
+            + x.toFixed(3) + ',' + y.toFixed(3) + ') rotate(' + (Math.atan2(b[1] - a[1], b[0] - a[0]) * 180 / Math.PI).toFixed(1) + ')"/>';
+        }
+        next += gap;
+      }
+      run += d;
+    }
+    return out;
+  }
+
   function setupZoom(box, full) {
     var svg = box.querySelector('svg'), view = full, drag = null, moved = 0;
     function apply() {
@@ -287,11 +370,7 @@
       Array.prototype.forEach.call(svg.querySelectorAll('circle'), function (c) {
         c.setAttribute('r', c.classList.contains('contenu') ? r / 2.4 : r);
       });
-      var half = 5 * view.w / box.clientWidth;
-      Array.prototype.forEach.call(svg.querySelectorAll('rect.noeud-membre'), function (q) {
-        q.setAttribute('x', Number(q.getAttribute('data-cx')) - half); q.setAttribute('y', Number(q.getAttribute('data-cy')) - half);
-        q.setAttribute('width', 2 * half); q.setAttribute('height', 2 * half);
-      });
+      scaleMarks(svg, view, box);
       if (state.fondOn) drawTiles(svg, view, box);
       if (U.scheduleSync) U.scheduleSync();
     }
@@ -355,6 +434,11 @@
         b.classList.toggle('actif', state.fondOn);
         box.querySelector('.attrib').hidden = !state.fondOn;
         if (state.fondOn) drawTiles(svg, view, box); else $('tuiles').innerHTML = '';
+      }
+      else if (b.dataset.z === 'sens') {
+        state.sensOff = !state.sensOff;
+        b.classList.toggle('actif', !state.sensOff);
+        svg.classList.toggle('cache-sens', !!state.sensOff);
       }
       else if (b.dataset.z === 'editer') U.openEditMenu(box);
       else if (b.dataset.z === 'reset') { view = full; apply(); }

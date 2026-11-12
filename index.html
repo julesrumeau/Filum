@@ -25,6 +25,9 @@
   table.contrib { border-collapse:collapse; font-size:.875rem; margin:6px 0; } table.contrib th, table.contrib td { padding:2px 10px; text-align:right; border-bottom:1px solid var(--bord); } table.contrib th:first-child, table.contrib td:first-child { text-align:left; }
   svg.osmc { vertical-align:middle; margin:0 4px; }
   button.morceau { font:inherit; background:none; border:1px solid var(--bord); border-radius:4px; padding:0 6px; cursor:pointer; color:inherit; }
+  svg .fleche { fill:none; stroke:#1a1a1a; stroke-width:2; stroke-linejoin:round; stroke-linecap:round; vector-effect:non-scaling-stroke; pointer-events:none; }
+  svg .depart { fill:#2e9e44; stroke:#fff; stroke-width:2; vector-effect:non-scaling-stroke; pointer-events:none; } svg .arrivee { fill:#1a1a1a; stroke:#fff; stroke-width:2; vector-effect:non-scaling-stroke; pointer-events:none; }
+  svg.cache-sens .fleche, svg.cache-sens .depart, svg.cache-sens .arrivee { display:none; }
   svg .voie.removed { stroke:var(--alerte); stroke-width:7; stroke-dasharray:8 5; }
   .feuille { position:relative; padding-right:14px; }
   .rail { position:absolute; left:2px; top:0; bottom:0; width:8px; border-left:2px solid var(--trace); pointer-events:none; }
@@ -130,6 +133,7 @@
 <script src="src/html.js"></script>
 <script src="src/osmc.js"></script>
 <script src="src/liens.js"></script>
+<script src="src/sens.js"></script>
 <script src="src/editeurs.js"></script>
 <script src="src/input.js"></script>
 <script src="src/osmapi.js"></script>
